@@ -34,7 +34,13 @@ class DashboardTemplate extends Component {
         name: "Projects",
         iconName: faLayerGroup,
         link: "/dashboard/project",
-        display: admin || student,
+        display: admin || instructor,
+      },
+      {
+        name: "Projects",
+        iconName: faLayerGroup,
+        link: "/dashboard/studentProject",
+        display: student,
       },
       {
         name: "Groups",
@@ -46,7 +52,7 @@ class DashboardTemplate extends Component {
         name: "Instructors",
         iconName: faChalkboardTeacher,
         link: "/dashboard/instructorPage",
-        display: admin,
+        display: admin || instructor,
       },
       {
         name: "Analytics",

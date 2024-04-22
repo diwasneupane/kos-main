@@ -34,7 +34,7 @@ const MainRoutes = () => {
         }
       />
 
-      <Route path="/" element={<LoginPage />} />
+      {/* <Route path="/" element={<LoginPage />} /> */}
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/dashboard/*" element={<ProtectedDashboardTemplate />}>
         <Route path="*" element={<DashboardRoutes />} />

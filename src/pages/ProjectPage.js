@@ -4,14 +4,14 @@ import ProjectList from "../components/Project/ProjectList";
 
 class ProjectPage extends Component {
   state = {
-    projectList: [], // Array of projects to display
-    projectModal: false, // Modal visibility
-    editData: null, // Data passed to the modal when editing
-    edit: false, // If modal is in edit mode
+    projectList: [],
+    projectModal: false,
+    editData: null,
+    edit: false,
   };
 
   componentDidMount() {
-    this.fetchProjects(); // Fetch projects when the component mounts
+    this.fetchProjects();
   }
 
   fetchProjects = async () => {
@@ -77,8 +77,8 @@ class ProjectPage extends Component {
               deleteProject={this.deleteProject}
               editData={this.state.editData}
               edit={this.state.edit}
-              handleAdd={this.handleAdd} // Pass handleAdd to ProjectList
-              handleUpdate={this.handleUpdate} // Pass handleUpdate to ProjectList
+              handleAdd={this.handleAdd}
+              handleUpdate={this.handleUpdate}
             />
           </div>
         </div>

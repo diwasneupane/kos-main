@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import AppButton from "../AppButton";
 import axios from "axios";
+import { getAuthToken } from "../../utils/Auth"; // Assuming this function retrieves the token
 
 class ProjectAddModal extends Component {
   state = {
@@ -8,30 +9,32 @@ class ProjectAddModal extends Component {
     description: "",
     startDate: "",
     endDate: "",
-    status: "Pending", // Default status
-    loading: false, // To manage loading state
-    error: null, // To manage error feedback
+    status: "Pending",
+    loading: false,
+    error: null,
   };
 
   componentDidMount() {
     if (this.props.edit) {
-      this.configData();
+      this.initializeEditData();
     }
   }
 
-  configData = () => {
-    let editData = this.props.editData;
-    this.setState({
-      title: editData.title,
-      description: editData.description,
-      startDate: editData.startDate,
-      endDate: editData.endDate,
-      status: editData.status,
-    });
+  initializeEditData = () => {
+    const { editData } = this.props;
+    if (editData) {
+      this.setState({
+        title: editData.title,
+        description: editData.description,
+        startDate: editData.startDate,
+        endDate: editData.endDate,
+        status: editData.status,
+      });
+    }
   };
 
   handleChange = (e) => {
-    let { name, value } = e.target;
+    const { name, value } = e.target;
     this.setState({ [name]: value });
   };
 
@@ -41,7 +44,7 @@ class ProjectAddModal extends Component {
       return "All fields must be filled out.";
     }
     if (new Date(startDate) > new Date(endDate)) {
-      return "End date must be after start date.";
+      return "End date must be after the start date.";
     }
     return null;
   };
@@ -56,19 +59,35 @@ class ProjectAddModal extends Component {
     this.setState({ loading: true, error: null });
 
     try {
-      if (this.props.edit) {
-        await this.props.handleUpdate(this.state);
+      const {
+        edit,
+        handleAdd,
+        handleUpdate,
+        onClose,
+        editData,
+        refreshProjects,
+      } = this.props;
+
+      if (edit) {
+        await handleUpdate({
+          ...this.state,
+          id: editData._id, // Make sure to pass a valid ID for updates
+        });
       } else {
-        await axios.post(
-          " http://localhost:3000/api/v1/project/addProjects",
-          this.state
-        );
-        this.props.refreshProjects(); // Callback to refresh project list
+        await handleAdd(this.state); // Call handleAdd from parent component
+        if (refreshProjects) {
+          refreshProjects(); // Refresh the project list after a successful add
+        }
       }
-      this.props.onClose(); // Close modal on success
+
+      if (onClose) {
+        onClose(); // Close modal on successful submission
+      }
     } catch (err) {
-      console.error(err); // Log error for debugging
-      this.setState({ error: "Failed to save the project. Please try again." });
+      console.error("Error during submission:", err);
+      this.setState({
+        error: "Failed to submit the project. Please try again.",
+      });
     } finally {
       this.setState({ loading: false });
     }
@@ -110,8 +129,8 @@ class ProjectAddModal extends Component {
           </div>
         </div>
 
-        <div class="row mb-2">
-          <div class="col-md-3">
+        <div className="row mb-2">
+          <div className="col-md-3">
             <strong>Start Date</strong>
           </div>
           <div class="col-md-9">
@@ -140,7 +159,7 @@ class ProjectAddModal extends Component {
           </div>
         </div>
 
-        <div class="row mb-2">
+        <div className="row mb-2">
           <div class="col-md-3">
             <strong>Status</strong>
           </div>

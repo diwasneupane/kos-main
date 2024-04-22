@@ -1,19 +1,80 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import AppButton from "../AppButton";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPenToSquare, faTrashAlt } from "@fortawesome/free-regular-svg-icons";
 import ModalWindow from "../../utils/ModalWindow";
-import ProjectAddModal from "./ProjectAddModal"; // Project add modal
+import ProjectAddModal from "./ProjectAddModal";
+import { getAuthToken } from "../../utils/Auth";
 
-const ProjectList = (props) => {
+const ProjectList = ({
+  toggleProjectModal,
+  projectModal,
+  editData,
+  edit,
+  handleAdd,
+  handleUpdate,
+}) => {
+  const [projectList, setProjectList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch("/api/v1/project/Projects", {
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch projects");
+        }
+
+        const data = await response.json();
+        setProjectList(data);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  const handleDeleteProject = async (id) => {
+    try {
+      const response = await fetch(`/api/v1/project/deleteProjects/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete project");
+      }
+
+      setProjectList((prevList) =>
+        prevList.filter((project) => project._id !== id)
+      );
+    } catch (error) {
+      console.error("Error deleting project:", error);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="dataContainerBox">
       <AppButton
         name="Add Project"
         customStyle="addBtnColor"
         icon={faPlus}
-        onClick={props.toggleProjectModal}
+        onClick={toggleProjectModal}
       />
       <table className="table customTable mt-3">
         <thead>
@@ -27,26 +88,26 @@ const ProjectList = (props) => {
           </tr>
         </thead>
         <tbody>
-          {props.projectList.length > 0 ? (
-            props.projectList.map((item, idx) => (
-              <tr key={idx}>
-                <td>{item.title}</td>
-                <td>{item.description}</td>
-                <td>{new Date(item.startDate).toLocaleDateString()}</td>
-                <td>{new Date(item.endDate).toLocaleDateString()}</td>
-                <td>{item.status}</td>
+          {projectList.length > 0 ? (
+            projectList.map((project) => (
+              <tr key={project._id}>
+                <td>{project.title}</td>
+                <td>{project.description}</td>
+                <td>{new Date(project.startDate).toLocaleDateString()}</td>
+                <td>{new Date(project.endDate).toLocaleDateString()}</td>
+                <td>{project.status}</td>
                 <td>
                   <span className="d-flex justify-content-between">
                     <FontAwesomeIcon
                       icon={faPenToSquare}
                       className="actionIcons editIcon"
-                      onClick={() => props.editProject(item)}
+                      onClick={() => editData(project)}
                     />
                     |
                     <FontAwesomeIcon
                       icon={faTrashAlt}
                       className="actionIcons deleteIcon"
-                      onClick={() => props.deleteProject(idx)}
+                      onClick={() => handleDeleteProject(project._id)}
                     />
                   </span>
                 </td>
@@ -61,16 +122,16 @@ const ProjectList = (props) => {
       </table>
 
       <ModalWindow
-        modal={props.projectModal}
-        toggleModal={props.toggleProjectModal}
-        modalHeader={props.edit ? "Update Project" : "Add New Project"}
+        modal={projectModal}
+        toggleModal={toggleProjectModal}
+        modalHeader={edit ? "Update Project" : "Add New Project"}
         size={`lg`}
         modalBody={
           <ProjectAddModal
-            editData={props.editData}
-            edit={props.edit}
-            handleAdd={props.handleAdd}
-            handleUpdate={props.handleUpdate}
+            edit={edit}
+            editData={editData}
+            handleAdd={handleAdd}
+            handleUpdate={handleUpdate}
           />
         }
       />

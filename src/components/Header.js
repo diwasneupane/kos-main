@@ -3,7 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
   faBell,
-  faCircleChevronDown,
   faEnvelope,
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
@@ -23,7 +22,6 @@ class Header extends Component {
     if (token) {
       try {
         const decodedToken = jwtDecode(token);
-        console.log(decodedToken);
         const username = decodedToken.username || "User";
         const userRoles = getUserRoles(); // Get roles using the function provided
         this.setState({ username, userRoles });
@@ -93,24 +91,6 @@ class Header extends Component {
                 <p className="userType">{userType}</p>
               </div>
             </div>
-            <FontAwesomeIcon icon={faCircleChevronDown} className="downArrow" />
-            <ul className="dropdown-menu">
-              <li>
-                <a className="dropdown-item" href="#">
-                  Action
-                </a>
-              </li>
-              <li>
-                <a className="dropdown-item" href="#">
-                  Another action
-                </a>
-              </li>
-              <li>
-                <a className="dropdown-item" onClick={onLogout}>
-                  Log Out
-                </a>
-              </li>
-            </ul>
           </span>
         </div>
       </header>

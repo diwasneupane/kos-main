@@ -20,8 +20,9 @@ const SideNav = ({
   handleClick,
 }) => {
   const location = useLocation(); // To handle dynamic path changes
-  const currentPath = location.pathname;
   const navigate = useNavigate(); // To manage navigation smoothly
+
+  const currentPath = location.pathname;
 
   return (
     <Sidebar
@@ -42,7 +43,6 @@ const SideNav = ({
               icon={<FontAwesomeIcon aria-hidden="true" icon={menu.iconName} />}
               className={currentPath === menu.link ? "sidebarActive" : ""}
               active={currentPath === menu.link}
-              onClick={() => handleClick(menu)}
               component={<Link to={menu.link} />}
             >
               {menu.name}
@@ -55,8 +55,6 @@ const SideNav = ({
             <FontAwesomeIcon aria-hidden="true" icon={settingMenu.iconName} />
           }
           className={currentPath === settingMenu.link ? "sidebarActive" : ""}
-          active={currentPath === settingMenu.link}
-          onClick={() => handleClick(settingMenu)}
           component={<Link to={settingMenu.link} />}
         >
           {settingMenu.name}
@@ -66,8 +64,9 @@ const SideNav = ({
             <FontAwesomeIcon aria-hidden="true" icon={faRightFromBracket} />
           }
           onClick={() => {
-            localStorage.clear(); // Clear authentication
-            navigate("/"); // Redirect without reloading the page
+            localStorage.clear();
+            // navigate("/"); // Redirect without reloading the page
+            window.location.reload();
           }}
         >
           Log Out
