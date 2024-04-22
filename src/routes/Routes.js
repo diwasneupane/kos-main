@@ -4,32 +4,42 @@ import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import DashboardTemplate from "../components/Dashboard/DashboardTemplate";
 import ErrorPage from "../pages/ErrorPage";
-import ProtectedRoute from "./ProtectedRoutes"; // Protected routes component
 import DashboardRoutes from "./DashboardRoutes";
 import { isAuthenticated } from "../utils/Auth";
 
+// HOC to wrap protected components
+const withAuth = (Component) => {
+  return (props) => {
+    if (isAuthenticated()) {
+      return <Component {...props} />;
+    } else {
+      return <Navigate to="/" replace />;
+    }
+  };
+};
+
 const MainRoutes = () => {
+  const ProtectedDashboardTemplate = withAuth(DashboardTemplate);
+
   return (
     <Routes>
       <Route
         path="/"
         element={
-          isAuthenticated ? (
-            <Navigate to="/dashboard" replace={true} />
+          isAuthenticated() ? (
+            <Navigate to="/dashboard" replace />
           ) : (
-            <LoginPage />
+            <Navigate to="/login" replace />
           )
         }
-      />{" "}
-      <Route path="/register" element={<RegisterPage />} /> {/* Public route */}
-      {/* Protected route for dashboard */}
-      <Route path="/dashboard/*" element={<ProtectedRoute />}>
-        <Route path="" element={<DashboardTemplate />}>
-          <Route path="*" element={<DashboardRoutes />} />{" "}
-          {/* All dashboard sub-routes */}
-        </Route>
+      />
+
+      <Route path="/" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/dashboard/*" element={<ProtectedDashboardTemplate />}>
+        <Route path="*" element={<DashboardRoutes />} />
       </Route>
-      {/* Catch-all for unmatched routes */}
+
       <Route path="*" element={<ErrorPage />} />
     </Routes>
   );

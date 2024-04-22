@@ -15,9 +15,11 @@ import {
   checkStudent,
 } from "../../utils/Permissions";
 import Header from "../Header";
+import { getRoles } from "@testing-library/react";
 
-const demoUser = "Admin";
-
+const admin = checkAdmin(getRoles);
+const instructor = checkInstructor(getRoles);
+const student = checkStudent(getRoles);
 class DashboardTemplate extends Component {
   state = {
     selectedMenu: null,
@@ -32,32 +34,31 @@ class DashboardTemplate extends Component {
         name: "Projects",
         iconName: faLayerGroup,
         link: "/dashboard/project",
-        display: checkAdmin(demoUser) ? true : false,
+        display: admin || student,
       },
       {
         name: "Groups",
         iconName: faUsers,
         link: "/dashboard/groupPage",
-        display:
-          checkAdmin(demoUser) || checkInstructor(demoUser) ? true : false,
+        display: admin || student,
       },
       {
         name: "Instructors",
         iconName: faChalkboardTeacher,
         link: "/dashboard/instructorPage",
-        display: checkAdmin(demoUser) ? true : false,
+        display: admin,
       },
       {
         name: "Analytics",
         iconName: faChartLine,
         link: "/dashboard/instructors",
-        display: checkAdmin(demoUser) ? true : false,
+        display: admin,
       },
       {
         name: "Members",
         iconName: faUsers,
         link: "/dashboard/membersPage",
-        display: checkStudent(demoUser) ? true : false,
+        display: admin,
       },
     ],
     settingMenu: {
