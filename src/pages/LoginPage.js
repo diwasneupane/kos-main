@@ -42,7 +42,7 @@ const LoginPage = () => {
       const { accessToken } = response.data.message;
 
       localStorage.setItem("authToken", accessToken);
-
+      window.location.reload();
       navigate("/dashboard");
 
       Swal.fire({
@@ -64,6 +64,7 @@ const LoginPage = () => {
     } finally {
       setIsLoading(false);
     }
+    window.location.reload();
   };
 
   const handleShowPassword = () => {
