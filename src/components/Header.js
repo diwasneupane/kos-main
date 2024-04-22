@@ -34,7 +34,7 @@ class Header extends Component {
   handleNotificationClick = () => {
     const panel = document.getElementById("nPanel");
     if (panel) {
-      panel.classList.toggle("panelHeight");
+      panel.classList?.toggle("panelHeight");
     }
   };
 
@@ -75,23 +75,17 @@ class Header extends Component {
               <NotificationPanel />
             </div>
           </div>
-          <span
-            className="dropdown d-flex align-items-center"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            style={{ cursor: "pointer" }}
+
+          <div
+            className="d-flex align-items-center"
+            style={{ margin: "0 10px" }}
           >
-            <div
-              className="d-flex align-items-center"
-              style={{ margin: "0 10px" }}
-            >
-              <img src={userImg} className="userImage" alt="User" />
-              <div className="ms-3">
-                <p className="userLabel">{username}</p>
-                <p className="userType">{userType}</p>
-              </div>
+            <img src={userImg} className="userImage" alt="User" />
+            <div className="ms-3">
+              <p className="userLabel">{username}</p>
+              <p className="userType">{userType}</p>
             </div>
-          </span>
+          </div>
         </div>
       </header>
     );
