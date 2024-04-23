@@ -70,7 +70,7 @@ class GroupPage extends Component {
             isActive: true,
             flagStatus: "At risk",
           },
-
+          ,
           {
             name: "John Doe",
             image: userImg,
@@ -94,7 +94,7 @@ class GroupPage extends Component {
             isActive: false,
             flagStatus: "Flag",
           },
-
+          ,
           {
             name: "Suman",
             image: userImg1,
@@ -141,6 +141,7 @@ class GroupPage extends Component {
     editData: null,
     edit: false,
   };
+
   handleChange = (e) => {
     let { name, value } = e.target;
     this.setState({ [name]: value });
