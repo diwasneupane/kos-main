@@ -80,7 +80,10 @@ const ApprovalVerifyList = () => {
   };
 
   return (
-    <div>
+    <div
+      className="p-4 bg-white m-4"
+      style={{ backgroundColor: "white", width: "97%", borderRadius: "5px" }}
+    >
       {loading ? (
         <div style={{ textAlign: "center" }}>
           <Spinner animation="border" role="status" />

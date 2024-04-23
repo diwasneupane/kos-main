@@ -4,11 +4,13 @@ import SideNav from "../SideNav";
 import {
   faChalkboardTeacher,
   faChartLine,
+  faCheckCircle,
   faGauge,
   faGears,
   faLayerGroup,
   faUserGraduate,
   faUsers,
+  faUsersViewfinder,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   checkAdmin,
@@ -56,8 +58,8 @@ class DashboardTemplate extends Component {
         display: admin || instructor,
       },
       {
-        name: "Student Verify",
-        iconName: faUserGraduate,
+        name: "User Verify",
+        iconName: faCheckCircle,
         link: "/dashboard/ApprovalVerifyList",
         display: admin || instructor,
       },
