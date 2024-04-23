@@ -181,9 +181,9 @@ const GroupList = () => {
             groupList.map((group) => (
               <tr key={group._id}>
                 <td className="tableData">{group.name}</td>
-                <td>{group.instructor ? group.instructor.name : "N/A"}</td>
+                <td>{group.instructor ? group.instructor.username : "N/A"}</td>
                 <td>
-                  {group.students.map((student) => student.name).join(", ")}
+                  {group.students.map((student) => student.username).join(", ")}
                 </td>
                 <td>
                   {group.projects.map((project) => project.title).join(", ")}
