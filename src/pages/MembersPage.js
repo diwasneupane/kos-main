@@ -28,7 +28,7 @@ class MembersPage extends Component {
             image: userImg1,
             userType: "Student",
           },
-          ,
+
           {
             name: "John Doe",
             image: userImg,
@@ -51,7 +51,7 @@ class MembersPage extends Component {
             image: userImg,
             userType: "Student",
           },
-          ,
+
           {
             name: "Suman",
             image: userImg1,

@@ -1,16 +1,8 @@
 import React from "react";
 import { Menu, MenuItem, Sidebar } from "react-pro-sidebar";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faRightFromBracket,
-  faChalkboardTeacher,
-  faChartLine,
-  faGauge,
-  faGears,
-  faLayerGroup,
-  faUsers,
-} from "@fortawesome/free-solid-svg-icons";
+import { faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import koiLogo from "../assets/images/koiLogo.png";
 
 const SideNav = ({
@@ -20,7 +12,6 @@ const SideNav = ({
   handleClick,
 }) => {
   const location = useLocation(); // To handle dynamic path changes
-  const navigate = useNavigate(); // To manage navigation smoothly
 
   const currentPath = location.pathname;
 

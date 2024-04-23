@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Table, Modal, Button, Form } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPlus,
-  faEdit,
-  faTrashAlt,
-  faBorderNone,
-} from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import { getAuthToken } from "../utils/Auth";
 import axios from "axios";
 

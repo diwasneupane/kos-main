@@ -34,9 +34,8 @@ const InstructorForm = ({ onSubmit, onClose, existingUsernames }) => {
   };
 
   const validateForm = () => {
-    const usernameRegex = /^.{5,}$/; // At least 5 characters
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%\^&\*]).{8,}$/;
+    const usernameRegex = /^.{5,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#%&]).{8,}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (formData.fullName.trim() === "") {
