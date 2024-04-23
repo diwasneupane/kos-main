@@ -7,6 +7,7 @@ import MembersPage from "../pages/MembersPage";
 import InstructorPage from "../pages/InstrutorPage";
 import ErrorPage from "../pages/ErrorPage";
 import StudentProjectPage from "../pages/StudentProjectPage";
+import StudentVerifyList from "../pages/StudentVerifyList";
 
 const DashboardRoutes = () => {
   return (
@@ -15,6 +16,7 @@ const DashboardRoutes = () => {
       <Route path="groupPage" element={<GroupPage />} />
       <Route path="project" element={<ProjectPage />} />
       <Route path="studentProject" element={<StudentProjectPage />} />
+      <Route path="StudentVerifyList" element={<StudentVerifyList />} />
       <Route path="membersPage" element={<MembersPage />} />
       <Route path="instructorPage" element={<InstructorPage />} />
       <Route path="*" element={<ErrorPage />} />{" "}

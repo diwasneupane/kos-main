@@ -7,6 +7,7 @@ import {
   faGauge,
   faGears,
   faLayerGroup,
+  faUserGraduate,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -34,7 +35,7 @@ class DashboardTemplate extends Component {
         name: "Projects",
         iconName: faLayerGroup,
         link: "/dashboard/project",
-        display: admin || instructor,
+        display: admin,
       },
       {
         name: "Projects",
@@ -52,6 +53,12 @@ class DashboardTemplate extends Component {
         name: "Instructors",
         iconName: faChalkboardTeacher,
         link: "/dashboard/instructorPage",
+        display: admin || instructor,
+      },
+      {
+        name: "Student Verify",
+        iconName: faUserGraduate,
+        link: "/dashboard/StudentVerifyList",
         display: admin || instructor,
       },
       {

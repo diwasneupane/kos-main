@@ -99,15 +99,15 @@ const ProjectPage = () => {
         <Table className="table customTable mt-3">
           <thead>
             <tr>
-              <th>Project Title</th>
-              <th>Description</th>
-              <th>Start Date</th>
-              <th>End Date</th>
-              <th>Status</th>
+              <th style={{ width: "20%" }}>Project Title</th>
+              <th style={{ width: "20%" }}>Description</th>
+              <th style={{ width: "20%" }}>Start Date</th>
+              <th style={{ width: "20%" }}>End Date</th>
+              <th style={{ width: "20%" }}>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody className="tableData" width={"40%"}>
+          <tbody className="tableData">
             {projects.map((project) => (
               <tr key={project._id}>
                 <td className="tableData">{project.title}</td>

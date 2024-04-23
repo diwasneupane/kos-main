@@ -20,6 +20,7 @@ const InstructorList = (props) => {
         <thead>
           <tr>
             <th>Instructor</th>
+
             <th>Email</th>
             <th>Phone</th>
             <th>Actions</th>
@@ -40,6 +41,7 @@ const InstructorList = (props) => {
                     </span>
                     {item.name}
                   </td>
+
                   <td>{item.email}</td>
                   <td>{item.phone}</td>
                   <td>

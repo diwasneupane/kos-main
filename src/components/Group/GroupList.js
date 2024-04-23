@@ -21,8 +21,8 @@ const GroupList = (props) => {
           <tr>
             <th>Group Name</th>
             <th>Instructor</th>
-            <th>Leader</th>
-            <th>Contact</th>
+            <th>Students</th>
+            <th>Projects</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -31,7 +31,7 @@ const GroupList = (props) => {
             props.groupList.map((item, idx) => {
               return (
                 <tr key={idx}>
-                  <td className="tableData" width={"40%"}>
+                  <td className="tableData" width={"20%"}>
                     {item.groupName}
                   </td>
                   <td>
@@ -55,11 +55,12 @@ const GroupList = (props) => {
                     {item.leader.name}
                   </td>
                   <td>
-                    <strong>Phone: </strong>
+                    {/* show project list here */}
+                    {/* <strong>Phone: </strong>
                     {item.leader.phone}
                     <br></br>
                     <strong>Email: </strong>
-                    {item.leader.email}
+                    {item.leader.email} */}
                   </td>
                   <td>
                     <span className="d-flex justify-content-between">
