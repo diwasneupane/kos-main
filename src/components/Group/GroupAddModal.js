@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Dropdown, Form, Row, Col, Alert } from "react-bootstrap";
+import Swal from "sweetalert2";
 import AppButton from "../AppButton";
 
 const GroupAddModal = (props) => {
@@ -11,8 +12,7 @@ const GroupAddModal = (props) => {
   const [instructors, setInstructors] = useState([]);
   const [students, setStudents] = useState([]);
   const [availableProjects, setAvailableProjects] = useState([]);
-  const [errors, setErrors] = useState({}); // Error tracking
-  const [successMessage, setSuccessMessage] = useState(null); // Success alert
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     fetchUsers();
@@ -42,7 +42,7 @@ const GroupAddModal = (props) => {
   const fetchProjects = async () => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/project/Projects` // Updated endpoint
+        `${process.env.REACT_APP_API_BASE_URL}/project/Projects`
       );
       const projectsData = response.data;
       if (Array.isArray(projectsData)) {
@@ -58,7 +58,7 @@ const GroupAddModal = (props) => {
   const configureEditData = () => {
     const editData = props.editData || {};
     setName(editData.name || "");
-    setInstructor(editData.instructor?._id || ""); // Ensure ID is used
+    setInstructor(editData.instructor?._id || "");
     setGroupStudent(editData.students?.map((s) => s._id) || []);
     setProjects(editData.projects?.map((p) => p._id) || []);
   };
@@ -104,7 +104,7 @@ const GroupAddModal = (props) => {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      return; // If validation fails, do not proceed
+      return; // Stop if validation fails
     }
 
     const groupData = {
@@ -114,12 +114,12 @@ const GroupAddModal = (props) => {
       projects,
     };
 
-    const token = localStorage.getItem("authToken"); // Adjust token retrieval if needed
+    const token = localStorage.getItem("authToken");
 
     try {
       if (props.edit) {
         console.log("Updating group:", groupData);
-        // Call API to update the group with a PATCH or PUT request
+        // Make the PATCH or PUT request to update
       } else {
         console.log("Creating group:", groupData);
         const response = await axios.post(
@@ -127,26 +127,28 @@ const GroupAddModal = (props) => {
           groupData,
           {
             headers: {
-              Authorization: `Bearer ${token}`, // Sending token in headers
+              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }
         );
 
         if (response.status === 201) {
-          setSuccessMessage("Group added successfully!");
-          // Close modal and trigger parent refresh
-          props.toggleModal();
-          props.onGroupAdded(); // Callback to update group list
+          // Check for success status
+          Swal.fire("Success", "Group added successfully!", "success");
+          props.toggleModal(); // Close modal after success
+          props.onGroupAdded(); // Callback to refresh parent component
         } else {
-          setErrors({ form: "Failed to add group. Please try again." });
+          Swal.fire("Error", "Failed to add group. Please try again.", "error");
         }
       }
     } catch (error) {
       console.error("Error creating group:", error);
-      setErrors({
-        form: error.response?.data?.message || "An error occurred.",
-      });
+      Swal.fire(
+        "Error",
+        `Error occurred: ${error.response?.data?.message || "Unknown error."}`,
+        "error"
+      );
     }
   };
 
@@ -167,19 +169,6 @@ const GroupAddModal = (props) => {
   return (
     <div className="container-fluid">
       <h2>{props.edit ? "Update Group" : "Create Group"}</h2>
-
-      {Object.keys(errors).length > 0 && (
-        <Alert variant="danger">{Object.values(errors)[0]}</Alert>
-      )}
-      {successMessage && (
-        <Alert
-          variant="success"
-          onClose={() => setSuccessMessage(null)}
-          dismissible
-        >
-          {successMessage}
-        </Alert>
-      )}
 
       <Row className="mb-3">
         <Col md={3}>
