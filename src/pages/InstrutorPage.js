@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Form, Button, Modal, Table } from "react-bootstrap";
+import { Form, Button, Modal, Table, Spinner } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -12,7 +12,7 @@ import Swal from "sweetalert2";
 import { getAuthToken } from "../utils/Auth";
 
 // InstructorForm Component
-const InstructorForm = ({ onSubmit, onClose }) => {
+const InstructorForm = ({ onSubmit, onClose, existingUsernames }) => {
   const [formData, setFormData] = useState({
     fullName: "",
     username: "",
@@ -24,84 +24,60 @@ const InstructorForm = ({ onSubmit, onClose }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleFormChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+    setFormData((prevData) => ({
+      ...prevData,
+      [field]: value,
+    }));
   };
 
-  const handleFormSubmit = async () => {
+  const toggleShowPassword = () => {
+    setShowPassword((prevShow) => !prevShow);
+  };
+
+  const validateForm = () => {
     const usernameRegex = /^.{5,}$/; // At least 5 characters
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%\^&\*]).{8,}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // Validate Full Name
     if (formData.fullName.trim() === "") {
-      Swal.fire({
-        title: "Error",
-        text: "Full Name is required.",
-        icon: "error",
-      });
-      return;
+      Swal.fire("Error", "Full Name is required.", "error");
+      return false;
     }
 
-    // Validate Username
     if (!usernameRegex.test(formData.username)) {
-      Swal.fire({
-        title: "Error",
-        text: "Username must be at least 5 characters long.",
-        icon: "error",
-      });
-      return;
+      Swal.fire("Error", "Username must be at least 5 characters.", "error");
+      return false;
     }
 
-    // Validate Email
+    if (existingUsernames.includes(formData.username)) {
+      Swal.fire("Error", "Username already exists.", "error");
+      return false;
+    }
+
     if (!emailRegex.test(formData.email)) {
-      Swal.fire({
-        title: "Error",
-        text: "Please enter a valid email address.",
-        icon: "error",
-      });
-      return;
+      Swal.fire("Error", "Please enter a valid email address.", "error");
+      return false;
     }
 
-    // Validate Password
     if (!passwordRegex.test(formData.password)) {
-      Swal.fire({
-        title: "Error",
-        text: "Password must have at least 8 characters with one uppercase, one lowercase, one number, and one special character.",
-        icon: "error",
-      });
-      return;
+      Swal.fire(
+        "Error",
+        "Password must be at least 8 characters with uppercase, lowercase, number, and special character.",
+        "error"
+      );
+      return false;
     }
 
-    // Username Availability Check
-    const isUsernameAvailable = await axios
-      .get(
-        `${process.env.REACT_APP_API_BASE_URL}/users/validate-username/${formData.username}`
-      )
-      .then((res) => res.data.available);
-
-    if (!isUsernameAvailable) {
-      Swal.fire({
-        title: "Error",
-        text: "Username already exists.",
-        icon: "error",
-      });
-      return;
-    }
-
-    if (onSubmit) {
-      await onSubmit(formData);
-      Swal.fire({
-        title: "Success",
-        text: "Instructor added successfully.",
-        icon: "success",
-      });
-      onClose();
-    }
+    return true;
   };
 
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
+  const handleFormSubmit = async () => {
+    if (validateForm()) {
+      await onSubmit(formData);
+      Swal.fire("Success", "Instructor added successfully.", "success");
+      onClose();
+    }
   };
 
   return (
@@ -110,7 +86,6 @@ const InstructorForm = ({ onSubmit, onClose }) => {
         <Form.Label>Full Name</Form.Label>
         <Form.Control
           type="text"
-          name="fullName"
           value={formData.fullName}
           onChange={(e) => handleFormChange("fullName", e.target.value)}
         />
@@ -120,7 +95,6 @@ const InstructorForm = ({ onSubmit, onClose }) => {
         <Form.Label>Username</Form.Label>
         <Form.Control
           type="text"
-          name="username"
           value={formData.username}
           onChange={(e) => handleFormChange("username", e.target.value)}
         />
@@ -130,7 +104,6 @@ const InstructorForm = ({ onSubmit, onClose }) => {
         <Form.Label>Email</Form.Label>
         <Form.Control
           type="email"
-          name="email"
           value={formData.email}
           onChange={(e) => handleFormChange("email", e.target.value)}
         />
@@ -140,7 +113,6 @@ const InstructorForm = ({ onSubmit, onClose }) => {
         <Form.Label>Phone</Form.Label>
         <Form.Control
           type="text"
-          name="phone"
           value={formData.phone}
           onChange={(e) => handleFormChange("phone", e.target.value)}
         />
@@ -151,7 +123,6 @@ const InstructorForm = ({ onSubmit, onClose }) => {
         <div style={{ display: "flex", alignItems: "center" }}>
           <Form.Control
             type={showPassword ? "text" : "password"}
-            name="password"
             value={formData.password}
             onChange={(e) => handleFormChange("password", e.target.value)}
           />
@@ -172,7 +143,6 @@ const InstructorForm = ({ onSubmit, onClose }) => {
       <Button
         style={{
           borderRadius: "5px",
-          border: "0",
           backgroundColor: "#2DBFCD",
           marginRight: "5px",
         }}
@@ -182,11 +152,7 @@ const InstructorForm = ({ onSubmit, onClose }) => {
       </Button>
 
       <Button
-        style={{
-          borderRadius: "5px",
-          border: "0",
-          backgroundColor: "#FFA500",
-        }}
+        style={{ borderRadius: "5px", backgroundColor: "#FFA500" }}
         onClick={onClose}
       >
         Close
@@ -205,47 +171,39 @@ const InstructorPage = () => {
     fetchInstructors();
   }, []);
 
+  const toggleModal = () => setShowModal((prevShow) => !prevShow);
+
   const fetchInstructors = async () => {
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/users/users`
       );
-      const users = response.data.message;
+      const data = response.data.message;
 
-      if (Array.isArray(users)) {
-        const instructorList = users.filter(
-          (user) => user.role === "instructor"
-        );
-        setInstructors(instructorList);
+      if (Array.isArray(data)) {
+        setInstructors(data);
       } else {
-        console.error("Expected an array of users but got:", users);
+        console.error("Expected an array but got:", data);
       }
     } catch (error) {
-      console.error("Error fetching instructors:", error);
+      console.error("Error fetching instructors:", error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleModal = () => setShowModal(!showModal);
-
   const handleAddInstructor = async (formData) => {
-    const data = { ...formData, role: "instructor", isApproved: true };
+    const newInstructor = { ...formData, role: "instructor", isApproved: true };
 
     try {
       await axios.post(
         `${process.env.REACT_APP_API_BASE_URL}/users/register`,
-        data
+        newInstructor
       );
-      fetchInstructors();
-      console.log(data.email);
-      toggleModal();
+      fetchInstructors(); // Refresh the list after successful addition
+      Swal.fire("Success", "Instructor added successfully.", "success");
     } catch (error) {
-      Swal.fire({
-        title: "Error",
-        text: "Error adding instructor. Please try again.",
-        icon: "error",
-      });
+      Swal.fire("Error", `Error adding instructor: ${error.message}`, "error");
     }
   };
 
@@ -257,28 +215,28 @@ const InstructorPage = () => {
           headers: { Authorization: `Bearer ${getAuthToken()}` },
         }
       );
-      setInstructors(instructors.filter((i) => i._id !== instructorId));
+      setInstructors((prevInstructors) =>
+        prevInstructors.filter((i) => i._id !== instructorId)
+      );
+      Swal.fire("Success", "Instructor deleted successfully.", "success");
     } catch (error) {
-      Swal.fire({
-        title: "Error",
-        text: "Error deleting instructor. Please try again.",
-        icon: "error",
-      });
+      Swal.fire(
+        "Error",
+        `Error deleting instructor: ${error.message}`,
+        "error"
+      );
     }
   };
 
+  const existingUsernames = instructors.map((i) => i.username); // For validation
+
   return (
     <div
-      className="p-4"
+      className="m-4 p-4"
       style={{ backgroundColor: "white", width: "97%", borderRadius: "5px" }}
     >
       <Button
-        style={{
-          borderRadius: "25px",
-          border: "0",
-          backgroundColor: "#2DBFCD",
-        }}
-        variant="primary"
+        style={{ borderRadius: "25px", backgroundColor: "#2DBFCD" }}
         onClick={toggleModal}
       >
         <FontAwesomeIcon icon={faPlus} style={{ color: "white" }} /> Add
@@ -286,25 +244,29 @@ const InstructorPage = () => {
       </Button>
 
       {loading ? (
-        <div>Loading...</div>
+        <div style={{ textAlign: "center", marginTop: "20px" }}>
+          <Spinner animation="border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </Spinner>
+        </div>
       ) : (
         <Table className="table customTable mt-3">
           <thead>
             <tr>
-              <th style={{ width: "30%" }}>Full Name</th>
-              <th style={{ width: "20%" }}>Username</th>
-              <th style={{ width: "20%" }}>Email</th>
-              <th style={{ width: "10%" }}>Phone</th>
-              <th style={{ width: "10%" }}>Actions</th>
+              <th>Full Name</th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Actions</th>
             </tr>
           </thead>
-          <tbody className="tableData">
+          <tbody>
             {instructors.map((instructor) => (
               <tr key={instructor._id}>
                 <td>{instructor.fullName}</td>
                 <td>{instructor.username}</td>
-                <td>{instructor.email}</td> {/* Check this line */}
-                <td>{instructor.phone}</td> {/* Check this line */}
+                <td>{instructor.email}</td>
+                <td>{instructor.phone}</td>
                 <td>
                   <Button
                     variant="link"
@@ -330,6 +292,7 @@ const InstructorPage = () => {
           <InstructorForm
             onSubmit={handleAddInstructor}
             onClose={toggleModal}
+            existingUsernames={existingUsernames}
           />
         </Modal.Body>
       </Modal>

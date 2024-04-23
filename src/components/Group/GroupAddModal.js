@@ -4,9 +4,9 @@ import { Dropdown, Form, Row, Col, Alert } from "react-bootstrap";
 import AppButton from "../AppButton";
 
 const GroupAddModal = (props) => {
-  const [groupName, setGroupName] = useState("");
+  const [name, setname] = useState("");
   const [instructor, setInstructor] = useState("");
-  const [groupMembers, setGroupMembers] = useState([]);
+  const [groupStudent, setGroupStudent] = useState([]);
   const [projects, setProjects] = useState([]);
   const [instructors, setInstructors] = useState([]);
   const [students, setStudents] = useState([]);
@@ -57,18 +57,18 @@ const GroupAddModal = (props) => {
 
   const configureEditData = () => {
     const editData = props.editData || {};
-    setGroupName(editData.groupName || "");
+    setname(editData.name || "");
     setInstructor(editData.instructor || "");
-    setGroupMembers(editData.members || []);
+    setGroupStudent(editData.Student || []);
     setProjects(editData.projects || []);
   };
 
   const toggleGroupMember = (userId) => {
-    setGroupMembers((prevMembers) => {
-      if (prevMembers.includes(userId)) {
-        return prevMembers.filter((id) => id !== userId);
+    setGroupStudent((prevStudent) => {
+      if (prevStudent.includes(userId)) {
+        return prevStudent.filter((id) => id !== userId);
       } else {
-        return [...prevMembers, userId];
+        return [...prevStudent, userId];
       }
     });
   };
@@ -85,14 +85,14 @@ const GroupAddModal = (props) => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!groupName.trim()) {
-      newErrors.groupName = "Group Name is required.";
+    if (!name.trim()) {
+      newErrors.name = "Group Name is required.";
     }
     if (!instructor) {
       newErrors.instructor = "Please select an instructor.";
     }
-    if (groupMembers.length === 0) {
-      newErrors.groupMembers = "Please select at least one group member.";
+    if (groupStudent.length === 0) {
+      newErrors.groupStudent = "Please select at least one group member.";
     }
     if (projects.length === 0) {
       newErrors.projects = "Please select at least one project.";
@@ -108,9 +108,9 @@ const GroupAddModal = (props) => {
     }
 
     const groupData = {
-      groupName,
+      name,
       instructor,
-      members: groupMembers,
+      student: groupStudent,
       projects,
     };
 
@@ -130,11 +130,11 @@ const GroupAddModal = (props) => {
     return selectedProjects.map((project) => project.title).join(", ");
   };
 
-  const getSelectedMembersName = () => {
-    const selectedMembers = students.filter((student) =>
-      groupMembers.includes(student._id)
+  const getSelectedStudentName = () => {
+    const selectedStudent = students.filter((student) =>
+      groupStudent.includes(student._id)
     );
-    return selectedMembers.map((student) => student.username).join(", ");
+    return selectedStudent.map((student) => student.username).join(", ");
   };
 
   return (
@@ -161,9 +161,9 @@ const GroupAddModal = (props) => {
         <Col md={9}>
           <input
             type="text"
-            name="groupName"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
+            name="name"
+            value={name}
+            onChange={(e) => setname(e.target.value)}
             className="form-control"
             placeholder="Enter group name"
           />
@@ -204,9 +204,9 @@ const GroupAddModal = (props) => {
               variant="info"
               id="dropdown-basic"
             >
-              {groupMembers.length > 0
-                ? `Selected: ${groupMembers.length}`
-                : "Select Group Members"}
+              {groupStudent.length > 0
+                ? `Selected: ${groupStudent.length}`
+                : "Select Group Student"}
             </Dropdown.Toggle>
             <Dropdown.Menu
               className="w-100"
@@ -217,7 +217,7 @@ const GroupAddModal = (props) => {
                   type="switch"
                   label={student.username}
                   key={student._id}
-                  checked={groupMembers.includes(student._id)}
+                  checked={groupStudent.includes(student._id)}
                   onChange={() => toggleGroupMember(student._id)}
                 />
               ))}
