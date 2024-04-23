@@ -1,59 +1,66 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { Table, Button, Form, Spinner, Alert } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
-import axios from "axios";
 
-const PendingStudentApprovalList = () => {
-  const [pendingUsers, setPendingUsers] = useState([]);
+// Student verification component
+const StudentVerifyList = () => {
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchPendingUsers();
-  }, []);
-
-  const fetchPendingUsers = async () => {
+  // Fetch pending approval students
+  const fetchPendingStudents = async () => {
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/users/pendingApproval`
       );
-      const users = response.data.message;
-
-      if (Array.isArray(users)) {
-        setPendingUsers(users);
-      } else {
-        console.error("Expected an array of users but got:", users);
-      }
-    } catch (error) {
-      setError("Error fetching pending approvals.");
-      console.error("Error fetching pending approvals:", error);
+      console.log(response);
+      const pendingStudents = response.data.message.filter(
+        (user) => user.role === "student" && !user.isApproved
+      );
+      setStudents(pendingStudents);
+    } catch (err) {
+      setError("Error fetching pending students.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleApproval = async (userId) => {
+  useEffect(() => {
+    fetchPendingStudents();
+  }, []);
+
+  // Approve a student
+  const handleToggleApproval = async (studentId) => {
     try {
       await axios.patch(
-        `${process.env.REACT_APP_API_BASE_URL}/users/users-approve/${userId}`
+        `${process.env.REACT_APP_API_BASE_URL}/users/users-approve/${studentId}`
       );
-      setPendingUsers(pendingUsers.filter((user) => user._id !== userId));
-    } catch (error) {
-      setError("Error approving user.");
-      console.error("Error approving user:", error);
+      setStudents((prev) =>
+        prev.map((student) =>
+          student.studentId === studentId
+            ? { ...student, isApproved: !student.isApproved }
+            : student
+        )
+      );
+    } catch (err) {
+      setError("Error approving student.");
     }
   };
 
-  const handleDelete = async (userId) => {
+  // Delete a student
+  const handleDelete = async (studentId) => {
     try {
       await axios.delete(
-        `${process.env.REACT_APP_API_BASE_URL}/users/users-delete/${userId}`
+        `${process.env.REACT_APP_API_BASE_URL}/users-delete/${studentId}`
       );
-      setPendingUsers(pendingUsers.filter((user) => user._id !== userId));
-    } catch (error) {
-      setError("Error deleting user.");
-      console.error("Error deleting user:", error);
+      setStudents((prev) =>
+        prev.filter((student) => student.studentId !== studentId)
+      );
+    } catch (err) {
+      setError("Error deleting student.");
     }
   };
 
@@ -85,25 +92,24 @@ const PendingStudentApprovalList = () => {
           </tr>
         </thead>
         <tbody>
-          {pendingUsers.length === 0 ? (
-            <tr>
-              <td colSpan="5">No users pending approval.</td>
-            </tr>
-          ) : (
-            pendingUsers.map((user) => (
-              <tr key={user._id}>
-                <td>{user.fullName}</td>
-                <td>{user.studentId}</td>
-                <td>{user.username}</td>
+          {students.length > 0 ? (
+            students.map((student) => (
+              <tr key={student.studentId}>
+                <td>{student.fullName}</td>
+                <td>{student.studentId}</td>
+                <td>{student.username}</td>
                 <td>
                   <Form.Check
                     type="switch"
-                    checked={false} // Initially, users are pending approval
-                    onChange={() => handleToggleApproval(user._id)}
+                    checked={student.isApproved}
+                    onChange={() => handleToggleApproval(student.studentId)}
                   />
                 </td>
                 <td>
-                  <Button variant="link" onClick={() => handleDelete(user._id)}>
+                  <Button
+                    variant="link"
+                    onClick={() => handleDelete(student.studentId)}
+                  >
                     <FontAwesomeIcon
                       icon={faTrashAlt}
                       style={{ color: "red" }}
@@ -112,6 +118,10 @@ const PendingStudentApprovalList = () => {
                 </td>
               </tr>
             ))
+          ) : (
+            <tr>
+              <td colSpan="5">No pending approvals</td>
+            </tr>
           )}
         </tbody>
       </Table>
@@ -119,4 +129,4 @@ const PendingStudentApprovalList = () => {
   );
 };
 
-export default PendingStudentApprovalList;
+export default StudentVerifyList;

@@ -4,7 +4,7 @@ import { Dropdown, Form, Row, Col, Alert } from "react-bootstrap";
 import AppButton from "../AppButton";
 
 const GroupAddModal = (props) => {
-  const [name, setname] = useState("");
+  const [name, setName] = useState("");
   const [instructor, setInstructor] = useState("");
   const [groupStudent, setGroupStudent] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -42,7 +42,7 @@ const GroupAddModal = (props) => {
   const fetchProjects = async () => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/project/Projects`
+        `${process.env.REACT_APP_API_BASE_URL}/project/Projects` // Updated endpoint
       );
       const projectsData = response.data;
       if (Array.isArray(projectsData)) {
@@ -57,18 +57,18 @@ const GroupAddModal = (props) => {
 
   const configureEditData = () => {
     const editData = props.editData || {};
-    setname(editData.name || "");
-    setInstructor(editData.instructor || "");
-    setGroupStudent(editData.Student || []);
-    setProjects(editData.projects || []);
+    setName(editData.name || "");
+    setInstructor(editData.instructor?._id || ""); // Ensure ID is used
+    setGroupStudent(editData.students?.map((s) => s._id) || []);
+    setProjects(editData.projects?.map((p) => p._id) || []);
   };
 
   const toggleGroupMember = (userId) => {
-    setGroupStudent((prevStudent) => {
-      if (prevStudent.includes(userId)) {
-        return prevStudent.filter((id) => id !== userId);
+    setGroupStudent((prevStudents) => {
+      if (prevStudents.includes(userId)) {
+        return prevStudents.filter((id) => id !== userId);
       } else {
-        return [...prevStudent, userId];
+        return [...prevStudents, userId];
       }
     });
   };
@@ -92,7 +92,7 @@ const GroupAddModal = (props) => {
       newErrors.instructor = "Please select an instructor.";
     }
     if (groupStudent.length === 0) {
-      newErrors.groupStudent = "Please select at least one group member.";
+      newErrors.groupStudent = "Please select at least one student.";
     }
     if (projects.length === 0) {
       newErrors.projects = "Please select at least one project.";
@@ -102,7 +102,7 @@ const GroupAddModal = (props) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
       return; // If validation fails, do not proceed
     }
@@ -110,16 +110,43 @@ const GroupAddModal = (props) => {
     const groupData = {
       name,
       instructor,
-      student: groupStudent,
+      students: groupStudent,
       projects,
     };
 
-    if (props.edit) {
-      console.log("Updating group:", groupData);
-      // Call API to update the group
-    } else {
-      console.log("Creating group:", groupData);
-      setSuccessMessage("Group added successfully!"); // Show success message
+    const token = localStorage.getItem("authToken"); // Adjust token retrieval if needed
+
+    try {
+      if (props.edit) {
+        console.log("Updating group:", groupData);
+        // Call API to update the group with a PATCH or PUT request
+      } else {
+        console.log("Creating group:", groupData);
+        const response = await axios.post(
+          `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
+          groupData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`, // Sending token in headers
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.status === 201) {
+          setSuccessMessage("Group added successfully!");
+          // Close modal and trigger parent refresh
+          props.toggleModal();
+          props.onGroupAdded(); // Callback to update group list
+        } else {
+          setErrors({ form: "Failed to add group. Please try again." });
+        }
+      }
+    } catch (error) {
+      console.error("Error creating group:", error);
+      setErrors({
+        form: error.response?.data?.message || "An error occurred.",
+      });
     }
   };
 
@@ -131,10 +158,10 @@ const GroupAddModal = (props) => {
   };
 
   const getSelectedStudentName = () => {
-    const selectedStudent = students.filter((student) =>
+    const selectedStudents = students.filter((student) =>
       groupStudent.includes(student._id)
     );
-    return selectedStudent.map((student) => student.username).join(", ");
+    return selectedStudents.map((student) => student.username).join(", ");
   };
 
   return (
@@ -163,7 +190,7 @@ const GroupAddModal = (props) => {
             type="text"
             name="name"
             value={name}
-            onChange={(e) => setname(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             className="form-control"
             placeholder="Enter group name"
           />
@@ -225,6 +252,7 @@ const GroupAddModal = (props) => {
           </Dropdown>
         </Col>
       </Row>
+
       <Row className="mb-3">
         <Col md={3}>
           <strong>Projects</strong>
