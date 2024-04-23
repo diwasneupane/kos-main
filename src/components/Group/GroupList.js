@@ -2,15 +2,17 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import AppButton from "../AppButton";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import { faPenToSquare, faTrashAlt } from "@fortawesome/free-regular-svg-icons";
-import { faRocketchat } from "@fortawesome/free-brands-svg-icons";
+import {
+  faPlus,
+  faPenToSquare,
+  faTrashAlt,
+} from "@fortawesome/free-solid-svg-icons";
 import ModalWindow from "../../utils/ModalWindow";
 import GroupAddModal from "./GroupAddModal";
+import Swal from "sweetalert2"; // Import SweetAlert2 for alerts
 
 // Helper function to get the token
 const getAuthToken = () => {
-  // Replace with your method to retrieve the token
   return localStorage.getItem("authToken");
 };
 
@@ -25,87 +27,134 @@ const GroupList = () => {
   }, []);
 
   const fetchGroupList = async () => {
-    const token = getAuthToken(); // Retrieve the token
+    const token = getAuthToken();
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // Include the token in the request
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      // If response has the expected structure
-      const groups = response.data.message; // Assuming message contains the group list
-      setGroupList(groups); // Set the group list state
+      setGroupList(response.data.message); // Assuming "message" contains the group list
     } catch (error) {
       console.error("Error fetching groups:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while fetching the group list.",
+      });
     }
   };
 
   const toggleAddGroupModal = () => {
     setAddGroupModal(!addGroupModal);
     if (!addGroupModal) {
-      setEditData(null); // Reset edit data when opening the modal
+      setEditData(null);
       setEdit(false);
     }
   };
 
   const addGroup = async (groupData) => {
-    const token = getAuthToken(); // Retrieve the token
+    const token = getAuthToken();
     try {
       const response = await axios.post(
-        `${process.env.REACT_APP_API_BASE_URL}/groups`,
+        `${process.env.REACT_APP_API_BASE_URL}/group/group`,
         groupData,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // Include the token in the request
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
       if (response.status === 201) {
-        setGroupList([...groupList, response.data.message]); // Add the new group to the list
-        toggleAddGroupModal(); // Close modal after adding
+        setGroupList([...groupList, response.data.message]);
+        toggleAddGroupModal(); // Close the modal after adding
       }
     } catch (error) {
       console.error("Error adding group:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while adding the group.",
+      });
     }
   };
 
   const editGroup = (group) => {
     setEdit(true);
-    setEditData(group); // Set the data for editing
+    setEditData(group);
     toggleAddGroupModal(); // Open the modal for editing
   };
 
-  const deleteGroup = async (groupId) => {
-    const token = getAuthToken(); // Retrieve the token
+  const handleEditGroup = async (groupData) => {
+    const token = getAuthToken();
     try {
-      await axios.delete(
-        `${process.env.REACT_APP_API_BASE_URL}/group/groups/${groupId}`,
+      const response = await axios.put(
+        `${process.env.REACT_APP_API_BASE_URL}/group/groups/${editData._id}`,
+        groupData,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // Include the token in the request
+            Authorization: `Bearer ${token}`,
           },
         }
       );
-      setGroupList(groupList.filter((group) => group._id !== groupId)); // Remove the group from the list
+
+      if (response.status === 200) {
+        const updatedGroupList = groupList.map((group) =>
+          group._id === editData._id ? { ...response.data.message } : group
+        );
+        setGroupList(updatedGroupList);
+
+        toggleAddGroupModal(); // Close the modal
+
+        Swal.fire({
+          icon: "success",
+          title: "Group Updated",
+          text: "The group has been updated successfully!",
+        });
+      }
     } catch (error) {
-      console.error("Error deleting group:", error);
+      console.error("Error updating group:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while updating the group.",
+      });
     }
   };
 
-  const handleAddGroup = (groupData) => {
-    if (edit) {
-      // Handle update logic
-      const updatedGroupList = groupList.map((group) =>
-        group._id === editData._id ? { ...editData, ...groupData } : group
+  const deleteGroup = async (groupId) => {
+    const token = getAuthToken();
+    try {
+      const response = await axios.delete(
+        `${process.env.REACT_APP_API_BASE_URL}/group/groups/${groupId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-      setGroupList(updatedGroupList);
-    } else {
-      addGroup(groupData); // Call addGroup for new group
+
+      if (response.status === 200) {
+        setGroupList(groupList.filter((group) => group._id !== groupId));
+
+        Swal.fire({
+          icon: "success",
+          title: "Group Deleted",
+          text: "The group has been deleted successfully!",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while deleting the group.",
+      });
     }
   };
 
@@ -131,24 +180,13 @@ const GroupList = () => {
           {groupList.length > 0 ? (
             groupList.map((group) => (
               <tr key={group._id}>
-                <td className="tableData" width={"20%"}>
-                  {group.name}
+                <td className="tableData">{group.name}</td>
+                <td>{group.instructor ? group.instructor.name : "N/A"}</td>
+                <td>
+                  {group.students.map((student) => student.name).join(", ")}
                 </td>
                 <td>
-                  {/* Display the instructor name or a placeholder */}
-                  {group.instructor ? group.instructor.name : "N/A"}
-                </td>
-                <td>
-                  {/* Display student names */}
-                  {group.students.map((student) => (
-                    <div key={student._id}>{student.name}</div>
-                  ))}
-                </td>
-                <td>
-                  {/* Display project titles */}
-                  {group.projects.map((project) => (
-                    <div key={project._id}>{project.title}</div>
-                  ))}
+                  {group.projects.map((project) => project.title).join(", ")}
                 </td>
                 <td>
                   <span className="d-flex justify-content-between">
@@ -163,11 +201,6 @@ const GroupList = () => {
                       className="actionIcons deleteIcon"
                       onClick={() => deleteGroup(group._id)}
                     />
-                    |
-                    <FontAwesomeIcon
-                      icon={faRocketchat}
-                      className="actionIcons chatIcon"
-                    />
                   </span>
                 </td>
               </tr>
@@ -180,20 +213,16 @@ const GroupList = () => {
         </tbody>
       </table>
 
-      <div className="d-flex justify-content-end">
-        <AppButton name="View All" customStyle="btnColorSecondary" />
-      </div>
-
       <ModalWindow
         modal={addGroupModal}
         toggleModal={toggleAddGroupModal}
-        modalHeader={edit ? "Update Group" : "Add New Group"}
+        modalHeader={edit ? "Edit Group" : "Add Group"}
         size="lg"
         modalBody={
           <GroupAddModal
             edit={edit}
             editData={editData}
-            onSubmit={handleAddGroup}
+            onSubmit={handleEditGroup}
           />
         }
       />

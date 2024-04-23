@@ -29,12 +29,12 @@ const MainRoutes = () => {
           isAuthenticated() ? (
             <Navigate to="/dashboard" replace />
           ) : (
-            <Navigate to="/login" replace />
+            <Navigate to="/" replace />
           )
         }
       />
 
-      {/* <Route path="/" element={<LoginPage />} /> */}
+      <Route path="/" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/dashboard/*" element={<ProtectedDashboardTemplate />}>
         <Route path="*" element={<DashboardRoutes />} />

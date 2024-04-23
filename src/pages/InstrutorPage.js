@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Form, Button, Modal, Table, Spinner } from "react-bootstrap";
+import { Form, Button, Modal, Table, Spinner, Dropdown } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus,
@@ -11,7 +11,6 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { getAuthToken } from "../utils/Auth";
 
-// InstructorForm Component
 const InstructorForm = ({ onSubmit, onClose, existingUsernames }) => {
   const [formData, setFormData] = useState({
     fullName: "",
@@ -86,7 +85,6 @@ const InstructorForm = ({ onSubmit, onClose, existingUsernames }) => {
         <Form.Label>Full Name</Form.Label>
         <Form.Control
           type="text"
-          value={formData.fullName}
           onChange={(e) => handleFormChange("fullName", e.target.value)}
         />
       </Form.Group>
@@ -166,10 +164,11 @@ const InstructorPage = () => {
   const [instructors, setInstructors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [roleFilter, setRoleFilter] = useState(""); // Role filtering state
 
   useEffect(() => {
     fetchInstructors();
-  }, []);
+  }, [roleFilter]); // Reload when role filter changes
 
   const toggleModal = () => setShowModal((prevShow) => !prevShow);
 
@@ -181,7 +180,11 @@ const InstructorPage = () => {
       const data = response.data.message;
 
       if (Array.isArray(data)) {
-        setInstructors(data);
+        const filteredInstructors = roleFilter
+          ? data.filter((instructor) => instructor.role === roleFilter)
+          : data;
+
+        setInstructors(filteredInstructors);
       } else {
         console.error("Expected an array but got:", data);
       }
@@ -200,7 +203,7 @@ const InstructorPage = () => {
         `${process.env.REACT_APP_API_BASE_URL}/users/register`,
         newInstructor
       );
-      fetchInstructors(); // Refresh the list after successful addition
+      fetchInstructors(); // Refresh after adding
       Swal.fire("Success", "Instructor added successfully.", "success");
     } catch (error) {
       Swal.fire("Error", `Error adding instructor: ${error.message}`, "error");
@@ -210,7 +213,7 @@ const InstructorPage = () => {
   const handleDelete = async (instructorId) => {
     try {
       await axios.delete(
-        `${process.env.REACT_APP_API_BASE_URL}/users-delete/${instructorId}`,
+        `${process.env.REACT_APP_API_BASE_URL}/users/users-delete/${instructorId}`,
         {
           headers: { Authorization: `Bearer ${getAuthToken()}` },
         }
@@ -243,6 +246,22 @@ const InstructorPage = () => {
         Instructor
       </Button>
 
+      <Dropdown className="mt-3 mb-3">
+        <Dropdown.Toggle variant="secondary" id="dropdown-basic">
+          {roleFilter ? `Filter by Role: ${roleFilter}` : "Filter by Role"}
+        </Dropdown.Toggle>
+
+        <Dropdown.Menu>
+          <Dropdown.Item onClick={() => setRoleFilter("")}>All</Dropdown.Item>
+          <Dropdown.Item onClick={() => setRoleFilter("instructor")}>
+            Instructor
+          </Dropdown.Item>
+          <Dropdown.Item onClick={() => setRoleFilter("admin")}>
+            Admin
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown>
+
       {loading ? (
         <div style={{ textAlign: "center", marginTop: "20px" }}>
           <Spinner animation="border" role="status">
@@ -257,6 +276,7 @@ const InstructorPage = () => {
               <th>Username</th>
               <th>Email</th>
               <th>Phone</th>
+              <th>Role</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -267,6 +287,7 @@ const InstructorPage = () => {
                 <td>{instructor.username}</td>
                 <td>{instructor.email}</td>
                 <td>{instructor.phone}</td>
+                <td>{instructor.role}</td>
                 <td>
                   <Button
                     variant="link"
