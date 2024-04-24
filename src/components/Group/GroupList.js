@@ -206,7 +206,7 @@ const GroupList = () => {
         onClick={toggleAddGroupModal}
       />
       <table className="table customTable mt-3">
-        <thead className="jus">
+        <thead className="text-center">
           <tr>
             <th className="w-20%">Group Name</th>
             <th className="w-20%">Instructor</th>
@@ -218,7 +218,7 @@ const GroupList = () => {
         <tbody>
           {groupList.length > 0 ? (
             groupList.map((group) => (
-              <tr key={group._id}>
+              <tr key={group._id} className="text-center">
                 <td className="tableData">{group.name}</td>
                 <td>{group.instructor ? group.instructor.username : "N/A"}</td>
                 <td>
@@ -228,21 +228,20 @@ const GroupList = () => {
                   {group.projects.map((project) => project.title).join(", ")}
                 </td>
                 <td>
-                  <span className="d-flex justify-content-around">
+                  <div className="d-flex justify-content-around align-items-center">
                     <Switch
                       onChange={() =>
                         toggleAtRiskStatus(group._id, group.atRisk)
                       }
                       checked={group.atRisk}
-                      boxShadow="20"
-                      offColor="#2DBFCD"
-                      onColor="#FFA500"
-                      uncheckedIcon={false}
+                      boxShadow="0px 1px 5px rgba(0, 0, 0, 0.5)"
+                      offColor="#2DBFCD" // Aesthetic choice for 'off' state
+                      onColor="#FFA500" // Aesthetic choice for 'on' state
+                      uncheckedIcon={false} // Hides the icons for simplicity
                       checkedIcon={false}
                       height={18}
                       width={36}
                     />
-
                     <FontAwesomeIcon
                       icon={faPenToSquare}
                       className="actionIcons editIcon"
@@ -253,13 +252,15 @@ const GroupList = () => {
                       className="actionIcons deleteIcon"
                       onClick={() => deleteGroup(group._id)}
                     />
-                  </span>
+                  </div>
                 </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={5}>No groups found</td>
+              <td colSpan={5} className="text-center">
+                No groups found
+              </td>
             </tr>
           )}
         </tbody>

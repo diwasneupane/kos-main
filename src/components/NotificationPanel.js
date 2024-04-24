@@ -1,58 +1,75 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ClampLines from "react-clamp-lines";
 import ModalWindow from "../utils/ModalWindow";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faExclamationTriangle,
+  faEnvelope,
+} from "@fortawesome/free-solid-svg-icons";
 
 const NotificationPanel = () => {
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    const storedNotifications = localStorage.getItem("notifications");
+    if (storedNotifications) {
+      setNotifications(JSON.parse(storedNotifications));
+    }
+  }, []);
+
+  const addNotification = (notification) => {
+    const updatedNotifications = [...notifications, notification];
+    setNotifications(updatedNotifications);
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+  };
+
+  const markNotificationAsRead = (index) => {
+    const updatedNotifications = [...notifications];
+    updatedNotifications.splice(index, 1);
+    setNotifications(updatedNotifications);
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+  };
+
   const [notificationModal, setNotificationModal] = useState(false);
 
   const handleNotificationModal = () => {
     setNotificationModal(!notificationModal);
   };
 
+  const renderIcon = (type) => {
+    switch (type) {
+      case "at-risk":
+        return <FontAwesomeIcon icon={faExclamationTriangle} color="orange" />;
+      case "message":
+        return <FontAwesomeIcon icon={faEnvelope} color="blue" />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div
-      className="notificationPanelBody"
-      // onClick={(e) => e.stopPropagation()}
-    >
+    <div className="notificationPanelBody">
       <div className="notificationTitle">Notifications</div>
       <div className="notificationBody">
-        <div
-          className="notificationPanelDataTemplateHolder"
-          onClick={handleNotificationModal}
-          //   style={!data.read ? { backgroundColor: "#cee7fa" } : null}
-        >
-          <div className="notifyMessageTitle">
-            Lorem Ipsum test for notification
+        {notifications.map((notification, index) => (
+          <div
+            className="notificationPanelDataTemplateHolder"
+            onClick={() => {
+              handleNotificationModal();
+              markNotificationAsRead(index);
+            }}
+          >
+            {renderIcon(notification.type)}
+            <div className="notifyMessageTitle">{notification.message}</div>
+            <div className="font-italic notification-period mt-1">
+              {new Date(notification.date).toDateString()}
+            </div>
           </div>
-          <div className="notifyMessageText">
-            <ClampLines
-              text="Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
-              id="really-unique-id"
-              lines={2}
-              ellipsis="..."
-              buttons={false}
-            />
-          </div>
-          <div className="font-italic notification-period mt-1">
-            20th Feb, 2024
-          </div>
-          <hr className="mt-1" />
-          <ModalWindow
-            modal={notificationModal}
-            toggleModal={handleNotificationModal}
-            modalHeader={"Lorem Ipsum test for notification"}
-            size={`lg`}
-            modalBody={
-              "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
-            }
-          ></ModalWindow>
-        </div>
+        ))}
       </div>
       <div className="notificationFooter">
-        <Link to="/notifications" target="_blank">
-          See all
-        </Link>
+        See all
         <br />
       </div>
     </div>
