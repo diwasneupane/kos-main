@@ -12,30 +12,20 @@ import GroupAddModal from "./GroupAddModal";
 import Swal from "sweetalert2";
 import Switch from "react-switch";
 
-import {
-  isAuthenticated,
-  getAuthToken,
-  getUserRoleFromToken,
-} from "../../utils/Auth";
+const getAuthToken = () => localStorage.getItem("authToken");
 
 const GroupList = () => {
   const [groupList, setGroupList] = useState([]);
   const [addGroupModal, setAddGroupModal] = useState(false);
   const [editData, setEditData] = useState(null);
   const [edit, setEdit] = useState(false);
-  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      fetchGroupList();
-      setUserRole(getUserRoleFromToken()); // Get the role from the token
-    }
+    fetchGroupList();
   }, []);
 
   const fetchGroupList = async () => {
     const token = getAuthToken();
-    if (!token) return;
-
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
@@ -47,6 +37,7 @@ const GroupList = () => {
       );
       setGroupList(response.data.message);
     } catch (error) {
+      console.error("Error fetching groups:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -57,6 +48,53 @@ const GroupList = () => {
 
   const toggleAddGroupModal = () => {
     setAddGroupModal(!addGroupModal);
+  };
+  const toggleAtRiskStatus = async (groupId, currentAtRisk) => {
+    const newAtRiskStatus = !currentAtRisk; // Toggle the current status
+    const token = getAuthToken();
+
+    try {
+      const response = await axios.patch(
+        `${process.env.REACT_APP_API_BASE_URL}/group/groups/${groupId}/flag-at-risk`,
+        { atRisk: newAtRiskStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        // Update the group list
+        const updatedGroupList = groupList.map((group) =>
+          group._id === groupId ? { ...group, atRisk: newAtRiskStatus } : group
+        );
+        setGroupList(updatedGroupList);
+
+        // Add a notification for the at-risk change
+        addNotification({
+          type: "at-risk",
+          message: `Group "${
+            groupList.find((g) => g._id === groupId).name
+          }" has been flagged as ${
+            newAtRiskStatus ? "at risk" : "not at risk"
+          }.`,
+          date: new Date(),
+        });
+
+        Swal.fire({
+          icon: "success",
+          title: "Status Updated",
+          text: "The group's 'at risk' status has been updated!",
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while toggling the 'at risk' status.",
+      });
+    }
   };
 
   const addGroup = async (groupData) => {
@@ -77,6 +115,7 @@ const GroupList = () => {
         toggleAddGroupModal(); // Close the modal after adding
       }
     } catch (error) {
+      console.error("Error adding group:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -103,23 +142,32 @@ const GroupList = () => {
           },
         }
       );
-
-      if (response.status === 200) {
+      console.log("Full response:", response);
+      if (response && response.status === 200) {
         const updatedGroupList = groupList.map((group) =>
           group._id === editData._id ? { ...response.data.message } : group
         );
         setGroupList(updatedGroupList);
+
         toggleAddGroupModal();
+
         Swal.fire({
           icon: "success",
           title: "Group Updated",
           text: "The group has been updated successfully!",
         });
+      } else {
+        console.error("Unexpected response or status:", response);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Unexpected response from server.",
+        });
       }
     } catch (error) {
+      console.error("Error updating group:", error);
       Swal.fire({
         icon: "error",
-        title: "Error",
         text: "An error occurred while updating the group.",
       });
     }
@@ -139,6 +187,7 @@ const GroupList = () => {
 
       if (response.status === 200) {
         setGroupList(groupList.filter((group) => group._id !== groupId));
+
         Swal.fire({
           icon: "success",
           title: "Group Deleted",
@@ -146,12 +195,22 @@ const GroupList = () => {
         });
       }
     } catch (error) {
+      console.error("Error deleting group:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
         text: "An error occurred while deleting the group.",
       });
     }
+  };
+
+  const addNotification = (notification) => {
+    const storedNotifications = localStorage.getItem("notifications");
+    const existingNotifications = storedNotifications
+      ? JSON.parse(storedNotifications)
+      : [];
+    const updatedNotifications = [...existingNotifications, notification];
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
   };
 
   return (
@@ -161,7 +220,6 @@ const GroupList = () => {
         customStyle="addBtnColor"
         icon={faPlus}
         onClick={toggleAddGroupModal}
-        disabled={userRole === "student"} // Disable if user role is student
       />
       <table className="table customTable mt-3">
         <thead className="text-center">
@@ -169,14 +227,14 @@ const GroupList = () => {
             <th className="w-20%">Group Name</th>
             <th className="w-20%">Instructor</th>
             <th className="w-20%">Students</th>
-            <th class="w-20%">Projects</th>
+            <th className="w-20%">Projects</th>
             <th className="w-20%">Actions</th>
           </tr>
         </thead>
         <tbody>
           {groupList.length > 0 ? (
             groupList.map((group) => (
-              <tr key={group._id} className="text-center">
+              <tr key={group._id} className="text-center ">
                 <td className="tableData">{group.name}</td>
                 <td>{group.instructor ? group.instructor.username : "N/A"}</td>
                 <td>
@@ -192,11 +250,10 @@ const GroupList = () => {
                         toggleAtRiskStatus(group._id, group.atRisk)
                       }
                       checked={group.atRisk}
-                      disabled={userRole === "student"} // Disable if user role is student
                       boxShadow="0px 1px 5px rgba(0, 0, 0, 0.5)"
-                      offColor="#2DBFCD"
-                      onColor="#FFA500"
-                      uncheckedIcon={false}
+                      offColor="#2DBFCD" // Aesthetic choice for 'off' state
+                      onColor="#FFA500" // Aesthetic choice for 'on' state
+                      uncheckedIcon={false} // Hides the icons for simplicity
                       checkedIcon={false}
                       height={18}
                       width={36}
@@ -205,13 +262,11 @@ const GroupList = () => {
                       icon={faPenToSquare}
                       className="actionIcons editIcon"
                       onClick={() => editGroup(group)}
-                      disabled={userRole === "student"} // Disable if user role is student
                     />
                     <FontAwesomeIcon
                       icon={faTrashAlt}
                       className="actionIcons deleteIcon"
                       onClick={() => deleteGroup(group._id)}
-                      disabled={userRole === "student"} // Disable if user role is student
                     />
                   </div>
                 </td>
@@ -229,16 +284,16 @@ const GroupList = () => {
 
       <ModalWindow
         modal={addGroupModal}
-        toggleModal={toggleAddGroupModal}
+        toggleModal={toggleAddGroupModal} // This is correct
         modalHeader={edit ? "Edit Group" : "Add Group"}
         size="lg"
         modalBody={
           <GroupAddModal
             edit={edit}
             editData={editData}
-            toggleModal={toggleAddGroupModal}
-            onSubmit={edit ? handleEditGroup : addGroup}
-            disabled={userRole === "student"} // Disable if user role is student
+            toggleModal={toggleAddGroupModal} // Make sure this is passed
+            onSubmit={edit ? handleEditGroup : addGroup} // Ensure correct handling
+            onGroupAdded={fetchGroupList} // If there's a prop for after a group is added
           />
         }
       />
