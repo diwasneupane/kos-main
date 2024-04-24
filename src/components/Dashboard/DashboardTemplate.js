@@ -61,7 +61,7 @@ class DashboardTemplate extends Component {
         name: "Instructors",
         iconName: faChalkboardTeacher,
         link: "/dashboard/InstructorView",
-        display: instructor,
+        display: instructor || student,
       },
       {
         name: "User Verify",

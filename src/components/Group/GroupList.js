@@ -159,7 +159,7 @@ const GroupList = () => {
 
   const toggleAtRiskStatus = async (groupId, currentAtRisk) => {
     const newAtRiskStatus = !currentAtRisk; // Toggle the current status
-    const token = getAuthToken(); // Ensure the token is fetched correctly
+    const token = getAuthToken();
 
     try {
       const response = await axios.patch(
@@ -171,30 +171,47 @@ const GroupList = () => {
           },
         }
       );
-      console.log("Current AtRisk:", currentAtRisk);
-      console.log("New AtRisk Status:", newAtRiskStatus);
+
       if (response.status === 200) {
+        // Update the group list
         const updatedGroupList = groupList.map((group) =>
           group._id === groupId ? { ...group, atRisk: newAtRiskStatus } : group
         );
-        setGroupList(updatedGroupList); // Update the UI with the new status
+        setGroupList(updatedGroupList);
+
+        // Add a notification for the at-risk change
+        addNotification({
+          type: "at-risk",
+          message: `Group "${
+            groupList.find((g) => g._id === groupId).name
+          }" has been flagged as ${
+            newAtRiskStatus ? "at risk" : "not at risk"
+          }.`,
+          date: new Date(),
+        });
 
         Swal.fire({
           icon: "success",
           title: "Status Updated",
           text: "The group's 'at risk' status has been updated!",
         });
-      } else {
-        throw new Error("Unexpected response status");
       }
     } catch (error) {
-      console.error("Error toggling 'at risk' status:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
         text: "An error occurred while toggling the 'at risk' status.",
       });
     }
+  };
+
+  const addNotification = (notification) => {
+    const storedNotifications = localStorage.getItem("notifications");
+    const existingNotifications = storedNotifications
+      ? JSON.parse(storedNotifications)
+      : [];
+    const updatedNotifications = [...existingNotifications, notification];
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
   };
 
   return (
@@ -218,7 +235,7 @@ const GroupList = () => {
         <tbody>
           {groupList.length > 0 ? (
             groupList.map((group) => (
-              <tr key={group._id} className="text-center">
+              <tr key={group._id} className="text-center ">
                 <td className="tableData">{group.name}</td>
                 <td>{group.instructor ? group.instructor.username : "N/A"}</td>
                 <td>
