@@ -206,12 +206,12 @@ const GroupList = () => {
         onClick={toggleAddGroupModal}
       />
       <table className="table customTable mt-3">
-        <thead>
+        <thead className="jus">
           <tr>
-            <th className="w-15%">Group Name</th>
-            <th className="w-25%">Instructor</th>
-            <th className="w-25%">Students</th>
-            <th className="w-15%">Projects</th>
+            <th className="w-20%">Group Name</th>
+            <th className="w-20%">Instructor</th>
+            <th className="w-20%">Students</th>
+            <th className="w-20%">Projects</th>
             <th className="w-20%">Actions</th>
           </tr>
         </thead>
@@ -229,18 +229,19 @@ const GroupList = () => {
                 </td>
                 <td>
                   <span className="d-flex justify-content-around">
-                    <td>
-                      <Switch
-                        onChange={() =>
-                          toggleAtRiskStatus(group._id, group.atRisk)
-                        }
-                        checked={group.atRisk}
-                        offColor="#bbb" // Gray when off
-                        onColor="#e74c3c" // Red when on
-                        uncheckedIcon={false}
-                        checkedIcon={false}
-                      />
-                    </td>
+                    <Switch
+                      onChange={() =>
+                        toggleAtRiskStatus(group._id, group.atRisk)
+                      }
+                      checked={group.atRisk}
+                      boxShadow="20"
+                      offColor="#2DBFCD"
+                      onColor="#FFA500"
+                      uncheckedIcon={false}
+                      checkedIcon={false}
+                      height={18}
+                      width={36}
+                    />
 
                     <FontAwesomeIcon
                       icon={faPenToSquare}
