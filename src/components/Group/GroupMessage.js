@@ -1,11 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPaperPlane,
-  faPaperclip,
-  faSearch,
-} from "@fortawesome/free-solid-svg-icons";
+import { faPaperPlane, faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { jwtDecode } from "jwt-decode";
 import moment from "moment";
@@ -20,9 +16,7 @@ const GroupMessage = () => {
   const [groupList, setGroupList] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [groupMessages, setGroupMessages] = useState([]);
-  const [filteredMessages, setFilteredMessages] = useState([]); // For filtered messages
   const [newMessage, setNewMessage] = useState("");
-  const [searchTerm, setSearchTerm] = useState(""); // Search term
   const [isLoading, setIsLoading] = useState(false);
 
   const messageListRef = useRef(null);
@@ -38,6 +32,15 @@ const GroupMessage = () => {
   }, []);
 
   useEffect(() => {
+    socket.on("newMessage", (message) => {
+      setGroupMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    return () => {
+      socket.off("newMessage");
+    };
+  }, []);
+  useEffect(() => {
     if (selectedGroup) {
       fetchGroupMessages(selectedGroup);
 
@@ -45,7 +48,7 @@ const GroupMessage = () => {
 
       socket.on("newMessage", (message) => {
         setGroupMessages((prevMessages) => [...prevMessages, message]);
-        scrollToBottom();
+        scrollToBottom(); // Scroll to the bottom when a new message is received
       });
     }
 
@@ -55,16 +58,17 @@ const GroupMessage = () => {
   }, [selectedGroup]);
 
   useEffect(() => {
-    filterMessages();
     scrollToBottom(); // Scroll to the bottom when the component updates
-  }, [groupMessages, searchTerm]); // Apply search term
+  }, [groupMessages]);
 
   const scrollToBottom = () => {
     if (messageListRef.current) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   };
-
+  socket.on("connect_error", (err) => {
+    console.error("Socket connection error:", err);
+  });
   const fetchGroupList = async () => {
     try {
       const response = await axios.get(`${serverUrl}/group/groups`, {
@@ -101,7 +105,6 @@ const GroupMessage = () => {
       }));
 
       setGroupMessages(messages);
-      filterMessages(); // Apply filtering when new messages are fetched
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -126,7 +129,7 @@ const GroupMessage = () => {
     const formData = {
       groupId: selectedGroup,
       content: newMessage,
-      senderId: currentUserId,
+      senderId: currentUserId, // Include the sender ID
     };
 
     try {
@@ -140,13 +143,13 @@ const GroupMessage = () => {
         }
       );
 
-      socket.emit("sendMessage", response.data.message);
+      socket.emit("sendMessage", response.data.message); // Emit to Socket.IO
 
       setGroupMessages((prevMessages) => [
         ...prevMessages,
         response.data.message,
       ]);
-      setNewMessage("");
+      setNewMessage(""); // Clear the message input
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -154,13 +157,6 @@ const GroupMessage = () => {
         text: "Failed to send the message.",
       });
     }
-  };
-
-  const filterMessages = () => {
-    const filtered = groupMessages.filter((message) =>
-      message.content.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredMessages(filtered);
   };
 
   return (
@@ -192,34 +188,19 @@ const GroupMessage = () => {
             </option>
           ))}
         </select>
-        <div>
-          <FontAwesomeIcon icon={faSearch} style={{ cursor: "pointer" }} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search messages..."
-            style={{
-              padding: "5px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
-              marginLeft: "10px",
-            }}
-          />
-        </div>
       </div>
 
       {isLoading ? (
         <div>Loading messages...</div>
       ) : (
         <div
-          ref={messageListRef}
+          ref={messageListRef} // Add the ref for auto-scrolling
           style={{ maxHeight: "300px", overflowY: "auto", margin: "10px 0" }}
         >
-          {filteredMessages.length === 0 ? (
+          {groupMessages.length === 0 ? (
             <div>No messages found</div>
           ) : (
-            filteredMessages.map((message) => (
+            groupMessages.map((message) => (
               <div key={message._id} style={{ margin: "10px 0" }}>
                 <div
                   style={{
