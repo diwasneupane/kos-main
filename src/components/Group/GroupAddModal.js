@@ -27,12 +27,10 @@ const GroupAddModal = (props) => {
       const response = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/users/users`
       );
-      const users = response.data.message;
+      const users = response.data.message || [];
       if (Array.isArray(users)) {
         setInstructors(users.filter((user) => user.role === "instructor"));
         setStudents(users.filter((user) => user.role === "student"));
-      } else {
-        console.warn("Unexpected response format for users:", users);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -44,11 +42,9 @@ const GroupAddModal = (props) => {
       const response = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/project/Projects`
       );
-      const projectsData = response.data;
+      const projectsData = response.data || [];
       if (Array.isArray(projectsData)) {
         setAvailableProjects(projectsData);
-      } else {
-        console.warn("Expected an array of projects but got:", projectsData);
       }
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -63,39 +59,19 @@ const GroupAddModal = (props) => {
     setProjects(editData.projects?.map((p) => p._id) || []);
   };
 
-  const toggleGroupMember = (userId) => {
-    setGroupStudent((prevStudents) => {
-      if (prevStudents.includes(userId)) {
-        return prevStudents.filter((id) => id !== userId);
-      } else {
-        return [...prevStudents, userId];
-      }
-    });
-  };
-
-  const toggleProject = (projectId) => {
-    setProjects((prevProjects) => {
-      if (prevProjects.includes(projectId)) {
-        return prevProjects.filter((id) => id !== projectId);
-      } else {
-        return [...prevProjects, projectId];
-      }
-    });
-  };
-
   const validateForm = () => {
     const newErrors = {};
     if (!name.trim()) {
-      newErrors.name = "Group Name is required.";
+      newErrors.name = "Group name is required.";
     }
     if (!instructor) {
-      newErrors.instructor = "Please select an instructor.";
+      newErrors.instructor = "Instructor selection is required.";
     }
     if (groupStudent.length === 0) {
-      newErrors.groupStudent = "Please select at least one student.";
+      newErrors.groupStudent = "At least one student must be selected.";
     }
     if (projects.length === 0) {
-      newErrors.projects = "Please select at least one project.";
+      newErrors.projects = "At least one project must be selected.";
     }
 
     setErrors(newErrors);
@@ -104,7 +80,7 @@ const GroupAddModal = (props) => {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      return; // Stop if validation fails
+      return;
     }
 
     const groupData = {
@@ -117,12 +93,11 @@ const GroupAddModal = (props) => {
     const token = localStorage.getItem("authToken");
 
     try {
+      let response;
       if (props.edit) {
-        console.log("Updating group:", groupData);
-        // Make the PATCH or PUT request to update
+        // Assuming there's an endpoint to update an existing group
       } else {
-        console.log("Creating group:", groupData);
-        const response = await axios.post(
+        response = await axios.post(
           `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
           groupData,
           {
@@ -132,44 +107,28 @@ const GroupAddModal = (props) => {
             },
           }
         );
+      }
 
-        if (response.status === 201) {
-          // Check for success status
-          Swal.fire("Success", "Group added successfully!", "success");
-          props.toggleModal(); // Close modal after success
-          props.onGroupAdded(); // Callback to refresh parent component
-        } else {
-          Swal.fire("Error", "Failed to add group. Please try again.", "error");
-        }
+      if (response.status === 201) {
+        Swal.fire("Success", "Group created successfully!", "success");
+        props.toggleModal();
+        props.onGroupAdded();
+      } else {
+        throw new Error("Unexpected status code");
       }
     } catch (error) {
-      console.error("Error creating group:", error);
-      Swal.fire(
-        "Error",
-        `Error occurred: ${error.response?.data?.message || "Unknown error."}`,
-        "error"
-      );
+      console.error("Error creating group:", error); // Log error for troubleshooting
+      const errorMsg =
+        error.response?.data?.message || "Unknown error occurred.";
+
+      Swal.fire("Error", `Group creation failed: ${errorMsg}`, "error");
     }
   };
-
-  const getSelectedProjectsTitle = () => {
-    const selectedProjects = availableProjects.filter((project) =>
-      projects.includes(project._id)
-    );
-    return selectedProjects.map((project) => project.title).join(", ");
-  };
-
-  const getSelectedStudentName = () => {
-    const selectedStudents = students.filter((student) =>
-      groupStudent.includes(student._id)
-    );
-    return selectedStudents.map((student) => student.username).join(", ");
-  };
-
   return (
     <div className="container-fluid">
       <h2>{props.edit ? "Update Group" : "Create Group"}</h2>
 
+      {/* Form Fields */}
       <Row className="mb-3">
         <Col md={3}>
           <strong>Group Name</strong>
@@ -180,9 +139,10 @@ const GroupAddModal = (props) => {
             name="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="form-control"
+            className={`form-control ${errors.name ? "is-invalid" : ""}`}
             placeholder="Enter group name"
           />
+          {errors.name && <div className="invalid-feedback">{errors.name}</div>}
         </Col>
       </Row>
 
@@ -195,7 +155,7 @@ const GroupAddModal = (props) => {
             name="instructor"
             value={instructor}
             onChange={(e) => setInstructor(e.target.value)}
-            className="form-select"
+            className={`form-select ${errors.instructor ? "is-invalid" : ""}`}
           >
             <option value="" disabled>
               Choose Instructor
@@ -206,6 +166,9 @@ const GroupAddModal = (props) => {
               </option>
             ))}
           </select>
+          {errors.instructor && (
+            <div className="invalid-feedback">{errors.instructor}</div>
+          )}
         </Col>
       </Row>
 
@@ -234,11 +197,22 @@ const GroupAddModal = (props) => {
                   label={student.username}
                   key={student._id}
                   checked={groupStudent.includes(student._id)}
-                  onChange={() => toggleGroupMember(student._id)}
+                  onChange={() => {
+                    if (groupStudent.includes(student._id)) {
+                      setGroupStudent(
+                        groupStudent.filter((s) => s !== student._id)
+                      );
+                    } else {
+                      setGroupStudent([...groupStudent, student._id]);
+                    }
+                  }}
                 />
               ))}
             </Dropdown.Menu>
           </Dropdown>
+          {errors.groupStudent && (
+            <div className="invalid-feedback">{errors.groupStudent}</div>
+          )}
         </Col>
       </Row>
 
@@ -254,7 +228,7 @@ const GroupAddModal = (props) => {
               id="dropdown-basic"
             >
               {projects.length > 0
-                ? `Selected: ${getSelectedProjectsTitle()}`
+                ? `Selected: ${projects.length}`
                 : "Select Projects"}
             </Dropdown.Toggle>
             <Dropdown.Menu
@@ -267,11 +241,20 @@ const GroupAddModal = (props) => {
                   label={project.title}
                   key={project._id}
                   checked={projects.includes(project._id)}
-                  onChange={() => toggleProject(project._id)}
+                  onChange={() => {
+                    if (projects.includes(project._id)) {
+                      setProjects(projects.filter((p) => p !== project._id));
+                    } else {
+                      setProjects([...projects, project._id]);
+                    }
+                  }}
                 />
               ))}
             </Dropdown.Menu>
           </Dropdown>
+          {errors.projects && (
+            <div className="invalid-feedback">{errors.projects}</div>
+          )}
         </Col>
       </Row>
 

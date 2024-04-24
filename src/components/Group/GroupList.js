@@ -9,12 +9,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import ModalWindow from "../../utils/ModalWindow";
 import GroupAddModal from "./GroupAddModal";
-import Swal from "sweetalert2"; // Import SweetAlert2 for alerts
+import Swal from "sweetalert2";
+import Switch from "react-switch";
 
-// Helper function to get the token
-const getAuthToken = () => {
-  return localStorage.getItem("authToken");
-};
+const getAuthToken = () => localStorage.getItem("authToken");
 
 const GroupList = () => {
   const [groupList, setGroupList] = useState([]);
@@ -37,8 +35,7 @@ const GroupList = () => {
           },
         }
       );
-
-      setGroupList(response.data.message); // Assuming "message" contains the group list
+      setGroupList(response.data.message);
     } catch (error) {
       console.error("Error fetching groups:", error);
       Swal.fire({
@@ -51,10 +48,6 @@ const GroupList = () => {
 
   const toggleAddGroupModal = () => {
     setAddGroupModal(!addGroupModal);
-    if (!addGroupModal) {
-      setEditData(null);
-      setEdit(false);
-    }
   };
 
   const addGroup = async (groupData) => {
@@ -93,7 +86,7 @@ const GroupList = () => {
   const handleEditGroup = async (groupData) => {
     const token = getAuthToken();
     try {
-      const response = await axios.put(
+      const response = await axios.patch(
         `${process.env.REACT_APP_API_BASE_URL}/group/groups/${editData._id}`,
         groupData,
         {
@@ -121,7 +114,6 @@ const GroupList = () => {
       console.error("Error updating group:", error);
       Swal.fire({
         icon: "error",
-        title: "Error",
         text: "An error occurred while updating the group.",
       });
     }
@@ -139,7 +131,7 @@ const GroupList = () => {
         }
       );
 
-      if (response.status === 200) {
+      if (response.status == 200) {
         setGroupList(groupList.filter((group) => group._id !== groupId));
 
         Swal.fire({
@@ -158,6 +150,43 @@ const GroupList = () => {
     }
   };
 
+  const toggleAtRisk = async (group) => {
+    const newAtRiskStatus = !group.atRisk; // Toggle the current status
+    const token = getAuthToken();
+
+    try {
+      const response = await axios.patch(
+        `${process.env.REACT_APP_API_BASE_URL}/group/groups/${group._id}/flag-at-risk`,
+        { atRisk: newAtRiskStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        const updatedGroupList = groupList.map((g) =>
+          g._id === group._id ? { ...g, atRisk: newAtRiskStatus } : g
+        );
+        setGroupList(updatedGroupList);
+
+        Swal.fire({
+          icon: "success",
+          title: "Status Updated",
+          text: "The group's 'at risk' status has been updated!",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating 'at risk' status:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while toggling the 'at risk' status.",
+      });
+    }
+  };
+
   return (
     <div className="dataContainerBox">
       <AppButton
@@ -169,11 +198,11 @@ const GroupList = () => {
       <table className="table customTable mt-3">
         <thead>
           <tr>
-            <th>Group Name</th>
-            <th>Instructor</th>
-            <th>Students</th>
-            <th>Projects</th>
-            <th>Actions</th>
+            <th className="w-15%">Group Name</th>
+            <th className="w-25%">Instructor</th>
+            <th className="w-25%">Students</th>
+            <th className="w-15%">Projects</th>
+            <th className="w-20%">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -189,13 +218,20 @@ const GroupList = () => {
                   {group.projects.map((project) => project.title).join(", ")}
                 </td>
                 <td>
-                  <span className="d-flex justify-content-between">
+                  <span className="d-flex justify-content-around">
+                    <Switch
+                      onChange={() => toggleAtRisk(group)}
+                      checked={group.atRisk}
+                      offColor="#bbb"
+                      onColor="#e74c3c" // Red color when at risk
+                      uncheckedIcon={false}
+                      checkedIcon={false}
+                    />
                     <FontAwesomeIcon
                       icon={faPenToSquare}
                       className="actionIcons editIcon"
                       onClick={() => editGroup(group)}
                     />
-                    |
                     <FontAwesomeIcon
                       icon={faTrashAlt}
                       className="actionIcons deleteIcon"
@@ -215,14 +251,16 @@ const GroupList = () => {
 
       <ModalWindow
         modal={addGroupModal}
-        toggleModal={toggleAddGroupModal}
+        toggleModal={toggleAddGroupModal} // This is correct
         modalHeader={edit ? "Edit Group" : "Add Group"}
         size="lg"
         modalBody={
           <GroupAddModal
             edit={edit}
             editData={editData}
-            onSubmit={handleEditGroup}
+            toggleModal={toggleAddGroupModal} // Make sure this is passed
+            onSubmit={edit ? handleEditGroup : addGroup} // Ensure correct handling
+            onGroupAdded={fetchGroupList} // If there's a prop for after a group is added
           />
         }
       />
