@@ -138,7 +138,7 @@ const GroupList = () => {
         }
       );
 
-      if (response.status == 200) {
+      if (response.status === 200) {
         setGroupList(groupList.filter((group) => group._id !== groupId));
 
         Swal.fire({

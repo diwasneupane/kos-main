@@ -43,8 +43,6 @@ const LoginPage = () => {
       const { accessToken } = response.data.message;
 
       localStorage.setItem("authToken", accessToken);
-      window.location.reload();
-      navigate("/dashboard");
 
       Swal.fire({
         title: "Success!",

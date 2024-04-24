@@ -29,7 +29,7 @@ const MainRoutes = () => {
           isAuthenticated() ? (
             <Navigate to="/dashboard" replace />
           ) : (
-            <Navigate to="/" replace />
+            <Navigate to="/" element={<LoginPage />} />
           )
         }
       />
