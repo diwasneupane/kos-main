@@ -10,7 +10,9 @@ import {
 import ModalWindow from "../../utils/ModalWindow";
 import GroupAddModal from "./GroupAddModal";
 import Swal from "sweetalert2";
+
 import Switch from "react-switch";
+import { jwtDecode } from "jwt-decode";
 
 const getAuthToken = () => localStorage.getItem("authToken");
 
@@ -19,9 +21,14 @@ const GroupList = () => {
   const [addGroupModal, setAddGroupModal] = useState(false);
   const [editData, setEditData] = useState(null);
   const [edit, setEdit] = useState(false);
-
+  const [userRole, setUserRole] = useState("");
   useEffect(() => {
     fetchGroupList();
+    const token = getAuthToken();
+    if (token) {
+      const decoded = jwtDecode(token);
+      setUserRole(decoded.role || "user"); // Default to 'user' if role not found
+    }
   }, []);
 
   const fetchGroupList = async () => {
@@ -47,7 +54,15 @@ const GroupList = () => {
   };
 
   const toggleAddGroupModal = () => {
-    setAddGroupModal(!addGroupModal);
+    if (userRole !== "student") {
+      setAddGroupModal(!addGroupModal);
+    } else {
+      Swal.fire({
+        icon: "warning",
+        title: "Forbidden",
+        text: "You do not have permission to edit this group.",
+      });
+    }
   };
   const toggleAtRiskStatus = async (groupId, currentAtRisk) => {
     const newAtRiskStatus = !currentAtRisk; // Toggle the current status
@@ -65,13 +80,11 @@ const GroupList = () => {
       );
 
       if (response.status === 200) {
-        // Update the group list
         const updatedGroupList = groupList.map((group) =>
           group._id === groupId ? { ...group, atRisk: newAtRiskStatus } : group
         );
         setGroupList(updatedGroupList);
 
-        // Add a notification for the at-risk change
         addNotification({
           type: "at-risk",
           message: `Group "${
@@ -89,11 +102,19 @@ const GroupList = () => {
         });
       }
     } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "An error occurred while toggling the 'at risk' status.",
-      });
+      if (error.response && error.response.status === 403) {
+        Swal.fire({
+          icon: "warning",
+          title: "Forbidden",
+          text: "You do not have permission to change the 'at risk' status.",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "An error occurred while updating the 'at risk' status.",
+        });
+      }
     }
   };
 
@@ -125,9 +146,18 @@ const GroupList = () => {
   };
 
   const editGroup = (group) => {
-    setEdit(true);
-    setEditData(group);
-    toggleAddGroupModal(); // Open the modal for editing
+    if (userRole !== "student") {
+      // Only allow editing if the role is not 'student'
+      setEdit(true);
+      setEditData(group);
+      setAddGroupModal(true); // Open the modal for editing
+    } else {
+      Swal.fire({
+        icon: "warning",
+        title: "Forbidden",
+        text: "You do not have permission to edit this group.",
+      });
+    }
   };
 
   const handleEditGroup = async (groupData) => {
@@ -195,12 +225,19 @@ const GroupList = () => {
         });
       }
     } catch (error) {
-      console.error("Error deleting group:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "An error occurred while deleting the group.",
-      });
+      if (error.response && error.response.status === 403) {
+        Swal.fire({
+          icon: "warning",
+          title: "Forbidden",
+          text: "You do not have permission to change the 'at risk' status.",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "An error occurred while updating the 'at risk' status.",
+        });
+      }
     }
   };
 

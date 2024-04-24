@@ -14,7 +14,8 @@ export const getUserRoleFromToken = () => {
   if (token) {
     try {
       const decoded = jwtDecode(token);
-      return decoded.role || "user"; // Default to 'user' if role not found
+      console.log("Decoded token:", decoded);
+      return decoded.role || "user";
     } catch (error) {
       console.error("Error decoding token:", error);
     }
