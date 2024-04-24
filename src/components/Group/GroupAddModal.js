@@ -94,8 +94,16 @@ const GroupAddModal = (props) => {
 
     try {
       let response;
-      if (props.edit) {
-        // Assuming there's an endpoint to update an existing group
+      if (props.edit && props.editData && props.editData._id) {
+        response = await axios.patch(
+          `${process.env.REACT_APP_API_BASE_URL}/group/groups/${props.editData._id}`,
+          groupData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
       } else {
         response = await axios.post(
           `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
@@ -103,27 +111,33 @@ const GroupAddModal = (props) => {
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
             },
           }
         );
       }
 
-      if (response.status === 201) {
-        Swal.fire("Success", "Group created successfully!", "success");
+      if (response.status >= 200 && response.status < 300) {
+        Swal.fire(
+          "Success",
+          props.edit
+            ? "Group updated successfully!"
+            : "Group created successfully!",
+          "success"
+        );
         props.toggleModal();
-        props.onGroupAdded();
+        props.onGroupAdded(); // Fetch the updated group list
       } else {
         throw new Error("Unexpected status code");
       }
     } catch (error) {
-      console.error("Error creating group:", error); // Log error for troubleshooting
+      console.error("Error creating or updating group:", error); // Log the error
+
       const errorMsg =
         error.response?.data?.message || "Unknown error occurred.";
-
-      Swal.fire("Error", `Group creation failed: ${errorMsg}`, "error");
+      Swal.fire("Error", `Group operation failed: ${errorMsg}`, "error");
     }
   };
+
   return (
     <div className="container-fluid">
       <h2>{props.edit ? "Update Group" : "Create Group"}</h2>

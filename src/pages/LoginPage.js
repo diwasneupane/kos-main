@@ -7,6 +7,7 @@ import { faKey, faUserAlt } from "@fortawesome/free-solid-svg-icons";
 import { faEye, faEyeSlash } from "@fortawesome/free-regular-svg-icons";
 import Swal from "sweetalert2";
 import logo from "../assets/images/koiLogo.png";
+import History from "../utils/History";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -72,7 +73,8 @@ const LoginPage = () => {
   };
 
   const handleRegister = () => {
-    navigate("/register");
+    History.push(`${process.env.PUBLIC_URL}/register`);
+    console.log("redirecting");
   };
 
   return (

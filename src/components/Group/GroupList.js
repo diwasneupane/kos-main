@@ -95,19 +95,26 @@ const GroupList = () => {
           },
         }
       );
-
-      if (response.status === 200) {
+      console.log("Full response:", response);
+      if (response && response.status === 200) {
         const updatedGroupList = groupList.map((group) =>
           group._id === editData._id ? { ...response.data.message } : group
         );
         setGroupList(updatedGroupList);
 
-        toggleAddGroupModal(); // Close the modal
+        toggleAddGroupModal();
 
         Swal.fire({
           icon: "success",
           title: "Group Updated",
           text: "The group has been updated successfully!",
+        });
+      } else {
+        console.error("Unexpected response or status:", response);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Unexpected response from server.",
         });
       }
     } catch (error) {
@@ -150,13 +157,13 @@ const GroupList = () => {
     }
   };
 
-  const toggleAtRisk = async (group) => {
-    const newAtRiskStatus = !group.atRisk; // Toggle the current status
-    const token = getAuthToken();
+  const toggleAtRiskStatus = async (groupId, currentAtRisk) => {
+    const newAtRiskStatus = !currentAtRisk; // Toggle the current status
+    const token = getAuthToken(); // Ensure the token is fetched correctly
 
     try {
       const response = await axios.patch(
-        `${process.env.REACT_APP_API_BASE_URL}/group/groups/${group._id}/flag-at-risk`,
+        `${process.env.REACT_APP_API_BASE_URL}/group/groups/${groupId}/flag-at-risk`,
         { atRisk: newAtRiskStatus },
         {
           headers: {
@@ -164,21 +171,24 @@ const GroupList = () => {
           },
         }
       );
-
+      console.log("Current AtRisk:", currentAtRisk);
+      console.log("New AtRisk Status:", newAtRiskStatus);
       if (response.status === 200) {
-        const updatedGroupList = groupList.map((g) =>
-          g._id === group._id ? { ...g, atRisk: newAtRiskStatus } : g
+        const updatedGroupList = groupList.map((group) =>
+          group._id === groupId ? { ...group, atRisk: newAtRiskStatus } : group
         );
-        setGroupList(updatedGroupList);
+        setGroupList(updatedGroupList); // Update the UI with the new status
 
         Swal.fire({
           icon: "success",
           title: "Status Updated",
           text: "The group's 'at risk' status has been updated!",
         });
+      } else {
+        throw new Error("Unexpected response status");
       }
     } catch (error) {
-      console.error("Error updating 'at risk' status:", error);
+      console.error("Error toggling 'at risk' status:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -219,14 +229,19 @@ const GroupList = () => {
                 </td>
                 <td>
                   <span className="d-flex justify-content-around">
-                    <Switch
-                      onChange={() => toggleAtRisk(group)}
-                      checked={group.atRisk}
-                      offColor="#bbb"
-                      onColor="#e74c3c" // Red color when at risk
-                      uncheckedIcon={false}
-                      checkedIcon={false}
-                    />
+                    <td>
+                      <Switch
+                        onChange={() =>
+                          toggleAtRiskStatus(group._id, group.atRisk)
+                        }
+                        checked={group.atRisk}
+                        offColor="#bbb" // Gray when off
+                        onColor="#e74c3c" // Red when on
+                        uncheckedIcon={false}
+                        checkedIcon={false}
+                      />
+                    </td>
+
                     <FontAwesomeIcon
                       icon={faPenToSquare}
                       className="actionIcons editIcon"

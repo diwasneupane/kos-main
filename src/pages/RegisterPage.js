@@ -147,7 +147,7 @@ class RegisterPage extends Component {
   };
 
   handleLogin = () => {
-    History.push(`${process.env.PUBLIC_URL}/`);
+    History.push(`${process.env.PUBLIC_URL}/login`);
   };
 
   render() {
