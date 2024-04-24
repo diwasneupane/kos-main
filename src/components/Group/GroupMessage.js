@@ -4,10 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2"; // For error handling
 import moment from "moment";
-
-// Image assets for user avatars
-import userImage1 from "../../assets/images/userImg.jpg";
-import userImage2 from "../../assets/images/userImg2.jpg";
+import userImage1 from "../../assets/images/userImg.jpg"; // User images
 
 const GroupMessage = ({ currentUserId }) => {
   const [groupList, setGroupList] = useState([]);
@@ -36,7 +33,6 @@ const GroupMessage = ({ currentUserId }) => {
           Authorization: `Bearer ${token}`,
         },
       });
-
       setGroupList(response.data.message || []);
     } catch (error) {
       Swal.fire({
@@ -59,13 +55,19 @@ const GroupMessage = ({ currentUserId }) => {
         }
       );
 
-      // Ensure sender's information is populated
-      const messages = response.data.messages.map((message) => ({
-        ...message,
-        senderName: message.sender.username, // Assuming user name is populated
+      // The messages are under response.data.message.messages
+      const messages = response.data.message.messages.map((msg) => ({
+        _id: msg._id,
+        content: msg.content,
+        sender: {
+          _id: msg.sender._id,
+          username: msg.sender.username,
+        },
+        attachment: msg.attachment,
+        createdAt: msg.createdAt,
       }));
 
-      setGroupMessages(messages);
+      setGroupMessages(messages); // Set the group messages in state
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -103,7 +105,7 @@ const GroupMessage = ({ currentUserId }) => {
         }
       );
 
-      setGroupMessages([...groupMessages, response.data.message]); // Add new message to the list
+      setGroupMessages([...groupMessages, response.data.message]); // Add the new message to the list
       setNewMessage(""); // Clear the message input
     } catch (error) {
       Swal.fire({
@@ -116,13 +118,7 @@ const GroupMessage = ({ currentUserId }) => {
 
   return (
     <div style={{ padding: "20px", backgroundColor: "#f0f0f0" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignitems: "center",
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
         <h3>Group Messages</h3>
         <select
           value={selectedGroup}
@@ -160,13 +156,12 @@ const GroupMessage = ({ currentUserId }) => {
                   style={{
                     display: "flex",
                     justifyContent:
-                      message.sender === currentUserId
+                      message.sender._id === currentUserId
                         ? "flex-end"
                         : "flex-start",
-                    alignitems: "center",
                   }}
                 >
-                  {message.sender !== currentUserId && (
+                  {message.sender._id !== currentUserId && (
                     <img
                       src={userImage1} // Default user image
                       alt="Sender"
@@ -181,16 +176,21 @@ const GroupMessage = ({ currentUserId }) => {
                   <div
                     style={{
                       backgroundColor:
-                        message.sender === currentUserId
+                        message.sender._id === currentUserId
                           ? "#d1e7dd"
                           : "#f8d7da",
                       padding: "10px",
                       borderRadius: "10px",
-                      textAlign: "left",
                     }}
                   >
                     {message.content}
-                    <div style={{ fontSize: "0.8em", color: "#666" }}>
+                    <div
+                      style={{
+                        fontSize: "0.8em",
+                        color: "#666",
+                        textAlign: "right",
+                      }}
+                    >
                       {moment(message.createdAt).fromNow()}
                     </div>
                   </div>
@@ -201,13 +201,7 @@ const GroupMessage = ({ currentUserId }) => {
         </div>
       )}
 
-      <div
-        style={{
-          display: "flex",
-          alignitems: "center",
-          justifycontent: "space-between",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center" }}>
         <FontAwesomeIcon
           icon={faPaperclip}
           onClick={() => document.getElementById("fileInput").click()}
