@@ -81,7 +81,7 @@ const GroupDetailsWithSearch = () => {
 
     try {
       await axios.post(
-        `${serverUrl}/send-message-to-user`,
+        `${serverUrl}/message/send-message-to-user`,
         {
           receiverId: selectedUser._id,
           content: messageContent,

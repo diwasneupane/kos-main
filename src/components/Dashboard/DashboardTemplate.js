@@ -49,7 +49,7 @@ class DashboardTemplate extends Component {
         name: "Groups",
         iconName: faUsers,
         link: "/dashboard/groupPage",
-        display: admin || instructor,
+        display: admin || instructor || student,
       },
       {
         name: "Instructors",
@@ -69,12 +69,7 @@ class DashboardTemplate extends Component {
         link: "/dashboard/ApprovalVerifyList",
         display: admin || instructor,
       },
-      {
-        name: "Group",
-        iconName: faChartLine,
-        link: "/dashboard/userGroup",
-        display: admin,
-      },
+
       {
         name: "Members",
         iconName: faUsers,

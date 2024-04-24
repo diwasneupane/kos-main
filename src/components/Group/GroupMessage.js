@@ -111,10 +111,13 @@ const GroupMessage = () => {
       return;
     }
 
+    // Disable interaction while waiting for server response
+    setIsLoading(true);
+
     const data = {
       groupId: selectedGroup,
       content: newMessage,
-      senderId: currentUserId, // ID of the sender
+      senderId: currentUserId,
     };
 
     try {
@@ -123,23 +126,31 @@ const GroupMessage = () => {
         data,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // Include the authorization header
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      socket.emit("sendMessage", response.data.message);
-      setGroupMessages((prevMessages) => [
-        ...prevMessages,
-        response.data.message,
-      ]);
-      setNewMessage(""); // Clear the input after sending the message
+      const newMessageObj = {
+        ...response.data.message,
+        sender: {
+          _id: currentUserId,
+          username: decodedToken.username,
+        },
+        senderName: decodedToken.username,
+      };
+
+      // Only update messages after server response
+      setGroupMessages((prevMessages) => [...prevMessages, newMessageObj]);
+      setNewMessage(""); // Clear input after successful submission
     } catch (error) {
       Swal.fire({
         icon: "error",
         title: "Error",
         text: "Failed to send the message.",
       });
+    } finally {
+      setIsLoading(false); // Re-enable interaction after completion
     }
   };
 

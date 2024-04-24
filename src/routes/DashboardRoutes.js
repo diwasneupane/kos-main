@@ -22,7 +22,6 @@ const DashboardRoutes = () => {
       <Route path="InstructorView" element={<InstructorTable />} />
       <Route path="membersPage" element={<MembersPage />} />
       <Route path="instructorPage" element={<InstructorPage />} />
-      <Route path="userGroup" element={<UserGroups />} />
       <Route path="*" element={<ErrorPage />} />{" "}
       {/* Catch-all for unmatched routes */}
     </Routes>

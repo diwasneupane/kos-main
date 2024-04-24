@@ -2,25 +2,17 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Card, ListGroup, Form, Button } from "react-bootstrap";
 import Swal from "sweetalert2";
-
-// Utility function to decode JWT and extract user ID
-const getUserIdFromToken = (token) => {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1])); // Extract JWT payload
-    return payload.userId;
-  } catch (error) {
-    return null;
-  }
-};
+import { jwtDecode } from "jwt-decode"; // Correct import for jwt-decode
 
 const UserGroups = () => {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [message, setMessage] = useState("");
+  const [intervalId, setIntervalId] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
-    const userId = getUserIdFromToken(token);
+    const userId = jwtDecode(token)._id;
 
     if (userId) {
       fetchUserGroups(userId, token);
@@ -32,7 +24,7 @@ const UserGroups = () => {
   const fetchUserGroups = async (userId, token) => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/groups?userId=${userId}`,
+        `${process.env.REACT_APP_API_BASE_URL}/group/groups?userId=${userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -41,7 +33,7 @@ const UserGroups = () => {
       );
 
       if (response.status === 200) {
-        setGroups(response.data.groups); // Assuming the endpoint returns a 'groups' array
+        setGroups(response.data.message); // Assuming the endpoint returns 'message' with group list
       } else {
         Swal.fire("Error", "Unable to fetch user groups.", "error");
       }
@@ -72,7 +64,7 @@ const UserGroups = () => {
 
       if (response.status === 200) {
         Swal.fire("Success", "Message sent!", "success");
-        setMessage(""); // Clear the input field after sending
+        setMessage(""); // Reset the message
       } else {
         Swal.fire("Error", "Failed to send message.", "error");
       }
@@ -80,6 +72,50 @@ const UserGroups = () => {
       console.error("Error sending message:", error);
       Swal.fire("Error", `Error occurred: ${error.message}`, "error");
     }
+  };
+
+  const startFetchingGroupDetails = (groupId) => {
+    const interval = setInterval(() => {
+      fetchGroupDetails(groupId); // Fetch data at intervals
+    }, 1000); // 1 second interval
+    setIntervalId(interval); // Save interval ID to clear later
+  };
+
+  const fetchGroupDetails = async (groupId) => {
+    const token = localStorage.getItem("authToken");
+
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/group/${groupId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        setSelectedGroup(response.data.message); // Assuming the endpoint returns 'message'
+      } else {
+        Swal.fire("Error", "Unable to fetch group details.", "error");
+      }
+    } catch (error) {
+      console.error("Error fetching group details:", error);
+      Swal.fire("Error", `Error occurred: ${error.message}`, "error");
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId); // Clear the interval on unmount
+      }
+    };
+  }, [intervalId]);
+
+  const handleGroupSelection = (group) => {
+    setSelectedGroup(group);
+    startFetchingGroupDetails(group._id); // Start fetching details at regular intervals
   };
 
   return (
@@ -94,7 +130,7 @@ const UserGroups = () => {
             {groups.map((group) => (
               <ListGroup.Item
                 key={group._id}
-                onClick={() => setSelectedGroup(group)}
+                onClick={() => handleGroupSelection(group)}
                 style={{ cursor: "pointer" }}
               >
                 {group.name}
