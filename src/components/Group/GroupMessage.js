@@ -3,12 +3,11 @@ import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from "jwt-decode"; // Correct import for jwt-decode
 import moment from "moment";
 import io from "socket.io-client";
 
-import userImage1 from "../../assets/images/userImg.jpg";
-import userImage2 from "../../assets/images/userImg2.jpg";
+import userImage1 from "../../assets/images/userImg.jpg"; // Sample user image
 
 const socket = io(process.env.REACT_APP_SOCKET_URL);
 
@@ -22,43 +21,30 @@ const GroupMessage = () => {
   const messageListRef = useRef(null);
 
   const token = localStorage.getItem("authToken");
-  const currentUser = jwtDecode(token);
-  const currentUserId = currentUser.userId;
+  const decodedToken = jwtDecode(token); // Correct jwtDecode usage
+  const currentUserId = decodedToken._id;
+  console.log("Retrieved token:", currentUserId);
+  // const token = localStorage.getItem("authToken");
 
   const serverUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
-    fetchGroupList();
+    fetchGroupList(); // Load group list on component mount
   }, []);
 
-  useEffect(() => {
-    socket.on("newMessage", (message) => {
-      setGroupMessages((prevMessages) => [...prevMessages, message]);
-    });
-
-    return () => {
-      socket.off("newMessage");
-    };
-  }, []);
   useEffect(() => {
     if (selectedGroup) {
       fetchGroupMessages(selectedGroup);
-
       socket.emit("joinGroup", selectedGroup);
-
-      socket.on("newMessage", (message) => {
-        setGroupMessages((prevMessages) => [...prevMessages, message]);
-        scrollToBottom(); // Scroll to the bottom when a new message is received
-      });
     }
 
     return () => {
-      socket.off("newMessage");
+      socket.off("newMessage"); // Clean up when the component unmounts or group changes
     };
   }, [selectedGroup]);
 
   useEffect(() => {
-    scrollToBottom(); // Scroll to the bottom when the component updates
+    scrollToBottom(); // Scroll to the bottom when messages update
   }, [groupMessages]);
 
   const scrollToBottom = () => {
@@ -66,9 +52,7 @@ const GroupMessage = () => {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   };
-  socket.on("connect_error", (err) => {
-    console.error("Socket connection error:", err);
-  });
+
   const fetchGroupList = async () => {
     try {
       const response = await axios.get(`${serverUrl}/group/groups`, {
@@ -77,7 +61,7 @@ const GroupMessage = () => {
         },
       });
 
-      setGroupList(response.data.message || []);
+      setGroupList(response.data.message || []); // Set the list of groups
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -94,7 +78,7 @@ const GroupMessage = () => {
         `${serverUrl}/group/groups/${groupId}/messages`,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`, // Include the authorization header
           },
         }
       );
@@ -102,6 +86,7 @@ const GroupMessage = () => {
       const messages = response.data.message.messages.map((message) => ({
         ...message,
         senderName: message.sender.username,
+        isCurrentUser: message.sender._id === currentUserId, // Check if the sender is the current user
       }));
 
       setGroupMessages(messages);
@@ -112,7 +97,7 @@ const GroupMessage = () => {
         text: "Failed to fetch messages for the selected group.",
       });
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Hide loading when done
     }
   };
 
@@ -126,30 +111,29 @@ const GroupMessage = () => {
       return;
     }
 
-    const formData = {
+    const data = {
       groupId: selectedGroup,
       content: newMessage,
-      senderId: currentUserId, // Include the sender ID
+      senderId: currentUserId, // ID of the sender
     };
 
     try {
       const response = await axios.post(
         `${serverUrl}/message/send-message-to-group`,
-        formData,
+        data,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`, // Include the authorization header
           },
         }
       );
 
-      socket.emit("sendMessage", response.data.message); // Emit to Socket.IO
-
+      socket.emit("sendMessage", response.data.message);
       setGroupMessages((prevMessages) => [
         ...prevMessages,
         response.data.message,
       ]);
-      setNewMessage(""); // Clear the message input
+      setNewMessage(""); // Clear the input after sending the message
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -194,7 +178,7 @@ const GroupMessage = () => {
         <div>Loading messages...</div>
       ) : (
         <div
-          ref={messageListRef} // Add the ref for auto-scrolling
+          ref={messageListRef}
           style={{ maxHeight: "300px", overflowY: "auto", margin: "10px 0" }}
         >
           {groupMessages.length === 0 ? (
@@ -205,43 +189,57 @@ const GroupMessage = () => {
                 <div
                   style={{
                     display: "flex",
-                    justifyContent:
-                      message.sender._id === currentUserId
-                        ? "flex-end"
-                        : "flex-start",
+                    justifyContent: message.isCurrentUser
+                      ? "flex-end"
+                      : "flex-start", // Align messages based on whether they are from the current user or others
                     alignItems: "center",
                   }}
                 >
-                  {message.sender._id !== currentUserId && (
-                    <img
-                      src={userImage1}
-                      alt="Sender"
+                  {message.isCurrentUser ? (
+                    <div
                       style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "50%",
-                        marginRight: "10px",
+                        backgroundColor: "#d1e7dd", // Background color for messages sent by the current user
+                        padding: "10px",
+                        borderRadius: "10px",
+                        textAlign: "left",
                       }}
-                    />
-                  )}
-                  <div
-                    style={{
-                      backgroundColor:
-                        message.sender._id === currentUserId
-                          ? "#d1e7dd"
-                          : "#f8d7da",
-                      padding: "10px",
-                      borderRadius: "10px",
-                      textAlign: "left",
-                    }}
-                  >
-                    <strong>{message.senderName}</strong>
-                    <br />
-                    {message.content}
-                    <div style={{ fontSize: "0.8em", color: "#666" }}>
-                      {moment(message.createdAt).fromNow()}
+                    >
+                      <strong>{message.senderName}</strong>
+                      <br />
+                      {message.content}
+                      <div style={{ fontSize: "0.8em", color: "#666" }}>
+                        {moment(message.createdAt).fromNow()}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <img
+                        src={userImage1}
+                        alt="Sender"
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "50%",
+                          marginRight: "10px",
+                        }}
+                      />
+                      <div
+                        style={{
+                          backgroundColor: "#f8d7da", // Background color for messages from others
+                          padding: "10px",
+                          borderRadius: "10px",
+                          textAlign: "left",
+                        }}
+                      >
+                        <strong>{message.senderName}</strong>
+                        <br />
+                        {message.content}
+                        <div style={{ fontSize: "0.8em", color: "#666" }}>
+                          {moment(message.createdAt).fromNow()}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             ))
@@ -265,7 +263,7 @@ const GroupMessage = () => {
           id="fileInput"
           type="file"
           style={{ display: "none" }}
-          onChange={() => console.log("File selected")} // Placeholder for file selection
+          onChange={() => console.log("File selected")}
         />
         <input
           type="text"

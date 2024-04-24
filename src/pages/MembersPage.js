@@ -4,14 +4,15 @@ import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faSearch } from "@fortawesome/free-solid-svg-icons";
 
-const GroupDetailsWithSearch = ({ currentUser }) => {
+const GroupDetailsWithSearch = () => {
   const [groupList, setGroupList] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [groupDetails, setGroupDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [messageContent, setMessageContent] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
+  const [messageContent, setMessageContent] = useState("");
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   const serverUrl = process.env.REACT_APP_API_BASE_URL;
   const token = localStorage.getItem("authToken");
@@ -68,18 +69,6 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
     }
   }, [selectedGroup]);
 
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const filteredMembers = groupDetails
-    ? groupDetails.students.filter((student) =>
-        student.fullName
-          ? student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
-          : true
-      )
-    : [];
-
   const handleSendMessage = async () => {
     if (!selectedUser || !messageContent.trim()) {
       Swal.fire({
@@ -92,7 +81,7 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
 
     try {
       await axios.post(
-        `${serverUrl}/message/send`,
+        `${serverUrl}/send-message-to-user`,
         {
           receiverId: selectedUser._id,
           content: messageContent,
@@ -105,18 +94,37 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
       );
       Swal.fire({
         icon: "success",
-        title: "Success",
-        text: "Message sent successfully.",
+        title: "Message Sent",
+        text: `Message sent to ${
+          selectedUser.fullName || selectedUser.username
+        }.`,
       });
-      setMessageContent("");
+      setMessageContent(""); // Reset the message content
       setSelectedUser(null);
+      setUnreadMessageCount((count) => count + 1); // Increase unread message count
     } catch (error) {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Failed to send message.",
+        text: "Failed to send message. Please try again.",
       });
     }
+  };
+
+  const handleSendMessageClick = (user) => {
+    setSelectedUser(user);
+    Swal.fire({
+      title: `Send Message to ${user.fullName || user.username}`,
+      input: "text",
+      inputPlaceholder: "Type your message here...",
+      confirmButtonText: "Send",
+      showCancelButton: true,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setMessageContent(result.value);
+        handleSendMessage();
+      }
+    });
   };
 
   return (
@@ -128,9 +136,8 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
         style={{
           padding: "10px",
           borderRadius: "5px",
-          marginBottom: "20px",
-          backgroundColor: "#fff",
           border: "1px solid #ddd",
+          marginBottom: "20px",
           color: "#333",
         }}
       >
@@ -155,49 +162,27 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
         >
           <h3>Group: {groupDetails.name}</h3>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <div>
-              <p>Instructor: {groupDetails.instructor?.username || "N/A"}</p>
-            </div>
-            <div>
-              <button
-                onClick={() => {
-                  setSelectedUser(groupDetails.instructor);
-                  Swal.fire({
-                    title: "Send Message",
-                    html: `
-                    <input type="text" placeholder="Your message..." id="message" class="swal2-input" value="${messageContent}">
-                  `,
-                    preConfirm: () => {
-                      const input = Swal.getPopup().querySelector("#message");
-                      if (input.value) {
-                        setMessageContent(input.value);
-                      }
-                    },
-                    confirmButtonText: "Send",
-                  }).then((result) => {
-                    if (result.isConfirmed) {
-                      handleSendMessage();
-                    }
-                  });
-                }}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#2196F3",
-                  color: "#fff",
-                  borderRadius: "5px",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <FontAwesomeIcon icon={faPaperPlane} /> Send Message
-              </button>
-            </div>
+            <p>Instructor: {groupDetails.instructor?.username || "N/A"}</p>
+            <button
+              onClick={() => handleSendMessageClick(groupDetails.instructor)}
+              style={{
+                padding: "10px",
+                backgroundColor: "#2196F3",
+                color: "#fff",
+                borderRadius: "5px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <FontAwesomeIcon icon={faPaperPlane} />
+              Send Message
+            </button>
           </div>
 
           <input
             type="text"
             value={searchQuery}
-            onChange={handleSearchChange}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search members..."
             style={{
               padding: "10px",
@@ -205,7 +190,6 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
               border: "1px solid #ddd",
               marginBottom: "20px",
               width: "100%",
-              fontSize: "16px",
             }}
           />
 
@@ -216,17 +200,10 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
               borderCollapse: "collapse",
               borderRadius: "5px",
               backgroundColor: "#fff",
-              overflow: "hidden",
             }}
           >
             <thead>
-              <tr
-                style={{
-                  textalign: "center",
-                  backgroundColor: "#eaeaea",
-                  fontWeight: "bold",
-                }}
-              >
+              <tr>
                 <th>Member Name</th>
                 <th>Student ID</th>
                 <th>Status</th>
@@ -234,8 +211,8 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
               </tr>
             </thead>
             <tbody>
-              {filteredMembers.length > 0 ? (
-                filteredMembers.map((student) => (
+              {groupDetails.students &&
+                groupDetails.students.map((student) => (
                   <tr key={student._id}>
                     <td>{student.fullName || student.username}</td>
                     <td>{student.studentId}</td>
@@ -244,27 +221,7 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
                     </td>
                     <td>
                       <button
-                        onClick={() => {
-                          setSelectedUser(student);
-                          Swal.fire({
-                            title: "Send Message",
-                            html: `
-                                <input type="text" placeholder="Your message..." id="message" class="swal2-input" value="${messageContent}">
-                              `,
-                            preConfirm: () => {
-                              const input =
-                                Swal.getPopup().querySelector("#message");
-                              if (input.value) {
-                                setMessageContent(input.value);
-                              }
-                            },
-                            confirmButtonText: "Send",
-                          }).then((result) => {
-                            if (result.isConfirmed) {
-                              handleSendMessage();
-                            }
-                          });
-                        }}
+                        onClick={() => handleSendMessageClick(student)}
                         style={{
                           padding: "10px",
                           backgroundColor: "#4CAF50",
@@ -272,22 +229,13 @@ const GroupDetailsWithSearch = ({ currentUser }) => {
                           border: "none",
                           color: "#fff",
                           cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
                         }}
                       >
                         <FontAwesomeIcon icon={faPaperPlane} />
                       </button>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" style={{ textAlign: "center" }}>
-                    No members found
-                  </td>
-                </tr>
-              )}
+                ))}
             </tbody>
           </table>
         </div>
