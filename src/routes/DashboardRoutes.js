@@ -9,6 +9,7 @@ import ErrorPage from "../pages/ErrorPage";
 import StudentProjectPage from "../pages/StudentProjectPage";
 import ApprovalVerifyList from "../pages/StudentVerifyList";
 import InstructorTable from "../pages/InstructorViewPage";
+import UserGroups from "../pages/UserGroup";
 
 const DashboardRoutes = () => {
   return (
@@ -21,6 +22,7 @@ const DashboardRoutes = () => {
       <Route path="InstructorView" element={<InstructorTable />} />
       <Route path="membersPage" element={<MembersPage />} />
       <Route path="instructorPage" element={<InstructorPage />} />
+      <Route path="userGroup" element={<UserGroups />} />
       <Route path="*" element={<ErrorPage />} />{" "}
       {/* Catch-all for unmatched routes */}
     </Routes>

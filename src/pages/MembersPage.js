@@ -1,356 +1,299 @@
-import React, { Component } from "react";
-import userImg from "../assets/images/userImg.jpg";
-import userImg1 from "../assets/images/userImg2.jpg";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCameraAlt,
-  faEllipsis,
-  faPaperclip,
-} from "@fortawesome/free-solid-svg-icons";
-import { faPaperPlane } from "@fortawesome/free-regular-svg-icons";
-import moment from "moment";
+import { faPaperPlane, faSearch } from "@fortawesome/free-solid-svg-icons";
 
-class MembersPage extends Component {
-  state = {
-    groupList: [
-      {
-        groupName: "Group B",
-        description:
-          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam facilisis mi vitae ex accumsan laoreet. Fusce dapibus fringilla feugiat. Vestibulum sed tristique orci. Pellentesque pretium felis ut congue consequat. Ut et nisi est. Proin eget nisl interdum, sagittis ex sed, viverra quam. Fusce semper placerat felis, at egestas ligula",
-        members: [
-          {
-            name: "Suman",
-            image: userImg,
-            userType: "Instructor",
-          },
-          {
-            name: "User 1",
-            image: userImg1,
-            userType: "Student",
-          },
+const GroupDetailsWithSearch = ({ currentUser }) => {
+  const [groupList, setGroupList] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupDetails, setGroupDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [messageContent, setMessageContent] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
 
-          {
-            name: "John Doe",
-            image: userImg,
-            userType: "Student",
-          },
-        ],
-      },
-      {
-        groupName: "Group A",
-        description:
-          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam facilisis mi vitae ex accumsan laoreet. Fusce dapibus fringilla feugiat. Vestibulum sed tristique orci. Pellentesque pretium felis ut congue consequat. Ut et nisi est. Proin eget nisl interdum, sagittis ex sed, viverra quam. Fusce semper placerat felis, at egestas ligula",
-        members: [
-          {
-            name: "Jane Doe",
-            image: userImg1,
-            userType: "Instructor",
-          },
-          {
-            name: "Avilash",
-            image: userImg,
-            userType: "Student",
-          },
+  const serverUrl = process.env.REACT_APP_API_BASE_URL;
+  const token = localStorage.getItem("authToken");
 
-          {
-            name: "Suman",
-            image: userImg1,
-            userType: "Admin",
-          },
-        ],
-      },
-    ],
-    groupChat: [
-      {
-        user: "Me",
-        userId: 1,
-        message: "Hello Everyone",
-        userImg: userImg,
-        date: "2024-03-24T10:12:50.500Z",
-      },
-      {
-        user: "John Doe",
-        userId: 13,
-        message: "Hello Sir. How are you ?",
-        userImg: userImg,
-        date: "2024-03-24T10:12:50.500Z",
-      },
-      {
-        user: "Suman",
-        userId: 12,
-        message: "Hello",
-        userImg: userImg,
-        date: "2024-03-25T10:12:50.500Z",
-      },
-      {
-        user: "Me",
-        userId: 1,
-        message: "There will be a small meeting regarding your work today.",
-        userImg: userImg,
-        date: "2024-03-24T10:12:50.500Z",
-      },
-    ],
-    selectedGroup: "",
-    message: "",
-    selectedGroupObject: null,
-  };
-
-  handleChange = (e) => {
-    let { name, value } = e.target;
-    this.setState({ [name]: value }, () => {
-      if (name === "selectedGroup") {
-        let choosenGroup = this.state.groupList.filter(
-          (el) => el.groupName === value
-        );
-        this.setState({ selectedGroupObject: choosenGroup[0] });
-      }
-    });
-  };
-
-  componentDidMount() {
-    this.config();
-  }
-
-  config = () => {
-    this.setState({ selectedGroupObject: this.state.groupList[0] }, () => {
-      this.setState({
-        selectedGroup: this.state.selectedGroupObject.groupName,
+  const fetchGroupList = async () => {
+    try {
+      const response = await axios.get(`${serverUrl}/group/groups`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-    });
+      setGroupList(response.data.message || []);
+    } catch (error) {
+      console.error("Error fetching group list:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while fetching the group list.",
+      });
+    }
   };
 
-  render() {
-    return (
-      <div className="container-fluid customMargin">
-        <div className="row">
-          <div className="col-md-8">
-            <div className="dataContainerBox">
-              <div className="d-flex justify-content-between">
-                <p className="contentTitle mb-0">{this.state.selectedGroup}</p>
-              </div>
-              <hr className="messageLine" />
-              <div className="fullChatBox">
-                {this.state.groupChat.length > 0
-                  ? this.state.groupChat.map((message, mIdx) => {
-                      if (message.userId === 1) {
-                        //later will be changed by user identification
-                        return (
-                          <div key={mIdx} className="messageRowMine">
-                            <div className="text-end">
-                              <div className="messageBubble">
-                                {message.message}
-                              </div>
-                              <span className="messageDate me-2">
-                                {moment(message.date).fromNow()}
-                              </span>
-                            </div>
-                            <img
-                              src={message.userImg}
-                              className="userMessageIcon"
-                              alt="User message"
-                            />
-                          </div>
-                        );
-                      } else {
-                        return (
-                          <div key={mIdx} className="messageRow">
-                            <img
-                              src={message.userImg}
-                              className="userMessageIcon"
-                              alt="User message"
-                            />
-                            <div className="text-end">
-                              <div className="messageBubble1">
-                                <span>{message.user}</span>
-                                <br></br>
-                                {message.message}
-                              </div>
-                              <span className="messageDate">
-                                {moment(message.date).fromNow()}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      }
-                    })
-                  : null}
-              </div>
-              <hr className="messageLine" />
-              <div className="d-flex align-items-center">
-                <FontAwesomeIcon icon={faPaperclip} className="chatIcons" />
-                <div style={{ flex: 1, margin: "0 10px" }}>
-                  <input
-                    type="text"
-                    name="message"
-                    value={this.state.message}
-                    onChange={this.handleChange}
-                    className="form-control"
-                    placeholder="Write your message"
-                  />
-                </div>
-                <FontAwesomeIcon icon={faCameraAlt} className="chatIcons" />
-                <FontAwesomeIcon icon={faPaperPlane} className="chatIcons" />
-              </div>
-            </div>
-          </div>
-          <div className="col-md-4">
-            <div className="dataContainerBox" style={{ height: "100%" }}>
-              <div className="d-flex justify-content-end">
-                <div>
-                  <select
-                    name="selectedGroup"
-                    value={this.state.selectedGroup}
-                    className="form-select"
-                    onChange={this.handleChange}
-                  >
-                    <option value="" disabled>
-                      Choose group
-                    </option>
-                    {this.state.groupList.length > 0
-                      ? this.state.groupList.map((item, idx) => {
-                          return (
-                            <option value={item.groupName} key={idx}>
-                              {item.groupName}
-                            </option>
-                          );
-                        })
-                      : "No groups added"}
-                  </select>
-                </div>
-              </div>
-              <p className="groupDesc">
-                {this.state.selectedGroupObject
-                  ? this.state.selectedGroupObject.description
-                  : ""}
-              </p>
-              <div className="accordion" id="accordionExample">
-                <div className="accordion-item">
-                  <h2 className="accordion-header">
-                    <button
-                      className="accordion-button"
-                      type="button"
-                      data-bs-toggle="collapse"
-                      data-bs-target="#collapseOne"
-                      aria-expanded="true"
-                      aria-controls="collapseOne"
-                    >
-                      View Photos and Files
-                    </button>
-                  </h2>
-                  <div
-                    id="collapseOne"
-                    class="accordion-collapse collapse show"
-                    data-bs-parent="#accordionExample"
-                  >
-                    <div class="accordion-body">
-                      <strong>This is the first item's accordion body.</strong>{" "}
-                      It is shown by default, until the collapse plugin adds the
-                      appropriate classes that we use to style each element.
-                      These classes control the overall appearance, as well as
-                      the showing and hiding via CSS transitions. You can modify
-                      any of this with custom CSS or overriding our default
-                      variables. It's also worth noting that just about any HTML
-                      can go within the <code>.accordion-body</code>, though the
-                      transition does limit overflow.
-                    </div>
-                  </div>
-                </div>
-                <div className="accordion-item">
-                  <h2 className="accordion-header">
-                    <button
-                      className="accordion-button collapsed"
-                      type="button"
-                      data-bs-toggle="collapse"
-                      data-bs-target="#collapseTwo"
-                      aria-expanded="false"
-                      aria-controls="collapseTwo"
-                    >
-                      Group Members
-                    </button>
-                  </h2>
-                  <div
-                    id="collapseTwo"
-                    className="accordion-collapse collapse"
-                    data-bs-parent="#accordionExample"
-                  >
-                    <div className="accordion-body">
-                      {this.state.selectedGroupObject
-                        ? this.state.selectedGroupObject.members.length > 0
-                          ? this.state.selectedGroupObject.members.map(
-                              (item, idx) => {
-                                return (
-                                  <div
-                                    key={idx}
-                                    className="d-flex justify-content-between mb-3"
-                                  >
-                                    <div className="d-flex align-items-center">
-                                      <img
-                                        src={item.image}
-                                        alt="member"
-                                        className="userMessageIcon me-3"
-                                      ></img>
-                                      <div>
-                                        <p className="memberLabel">
-                                          {item.name}
-                                        </p>
-                                        <p className="memberType">
-                                          {item.userType}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <FontAwesomeIcon
-                                        icon={faEllipsis}
-                                        className="memberMenu"
-                                      />
-                                    </div>
-                                  </div>
-                                );
-                              }
-                            )
-                          : null
-                        : null}
-                    </div>
-                  </div>
-                </div>
-                <div className="accordion-item">
-                  <h2 className="accordion-header">
-                    <button
-                      className="accordion-button collapsed"
-                      type="button"
-                      data-bs-toggle="collapse"
-                      data-bs-target="#collapseThree"
-                      aria-expanded="false"
-                      aria-controls="collapseThree"
-                    >
-                      Privacy & Support
-                    </button>
-                  </h2>
-                  <div
-                    id="collapseThree"
-                    className="accordion-collapse collapse"
-                    data-bs-parent="#accordionExample"
-                  >
-                    <div className="accordion-body">
-                      <strong>This is the third item's accordion body.</strong>{" "}
-                      It is hidden by default, until the collapse plugin adds
-                      the appropriate classes that we use to style each element.
-                      These classes control the overall appearance, as well as
-                      the showing and hiding via CSS transitions. You can modify
-                      any of this with custom CSS or overriding our default
-                      variables. It's also worth noting that just about any HTML
-                      can go within the <code>.accordion-body</code>, though the
-                      transition does limit overflow.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-}
+  const fetchGroupDetails = async (groupId) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(
+        `${serverUrl}/group/groups/${groupId}/members`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setGroupDetails(response.data.message || {});
+    } catch (error) {
+      console.error("Error fetching group details:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while fetching group details.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-export default MembersPage;
+  useEffect(() => {
+    fetchGroupList();
+  }, []);
+
+  useEffect(() => {
+    if (selectedGroup) {
+      fetchGroupDetails(selectedGroup);
+    }
+  }, [selectedGroup]);
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredMembers = groupDetails
+    ? groupDetails.students.filter((student) =>
+        student.fullName
+          ? student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+          : true
+      )
+    : [];
+
+  const handleSendMessage = async () => {
+    if (!selectedUser || !messageContent.trim()) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Please select a user and enter a message.",
+      });
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${serverUrl}/message/send`,
+        {
+          receiverId: selectedUser._id,
+          content: messageContent,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: "Message sent successfully.",
+      });
+      setMessageContent("");
+      setSelectedUser(null);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to send message.",
+      });
+    }
+  };
+
+  return (
+    <div style={{ padding: "20px", backgroundColor: "#fff" }}>
+      <h2>Select a Group to View Details</h2>
+      <select
+        value={selectedGroup}
+        onChange={(e) => setSelectedGroup(e.target.value)}
+        style={{
+          padding: "10px",
+          borderRadius: "5px",
+          marginBottom: "20px",
+          backgroundColor: "#fff",
+          border: "1px solid #ddd",
+          color: "#333",
+        }}
+      >
+        <option value="">-- Select a Group --</option>
+        {groupList.map((group) => (
+          <option key={group._id} value={group._id}>
+            {group.name}
+          </option>
+        ))}
+      </select>
+
+      {isLoading && <div>Loading group details...</div>}
+
+      {groupDetails && (
+        <div
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: "10px",
+            padding: "20px",
+            backgroundColor: "#f9f9f9",
+          }}
+        >
+          <h3>Group: {groupDetails.name}</h3>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div>
+              <p>Instructor: {groupDetails.instructor?.username || "N/A"}</p>
+            </div>
+            <div>
+              <button
+                onClick={() => {
+                  setSelectedUser(groupDetails.instructor);
+                  Swal.fire({
+                    title: "Send Message",
+                    html: `
+                    <input type="text" placeholder="Your message..." id="message" class="swal2-input" value="${messageContent}">
+                  `,
+                    preConfirm: () => {
+                      const input = Swal.getPopup().querySelector("#message");
+                      if (input.value) {
+                        setMessageContent(input.value);
+                      }
+                    },
+                    confirmButtonText: "Send",
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      handleSendMessage();
+                    }
+                  });
+                }}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#2196F3",
+                  color: "#fff",
+                  borderRadius: "5px",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <FontAwesomeIcon icon={faPaperPlane} /> Send Message
+              </button>
+            </div>
+          </div>
+
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search members..."
+            style={{
+              padding: "10px",
+              borderRadius: "5px",
+              border: "1px solid #ddd",
+              marginBottom: "20px",
+              width: "100%",
+              fontSize: "16px",
+            }}
+          />
+
+          <h4>Members</h4>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              borderRadius: "5px",
+              backgroundColor: "#fff",
+              overflow: "hidden",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  textalign: "center",
+                  backgroundColor: "#eaeaea",
+                  fontWeight: "bold",
+                }}
+              >
+                <th>Member Name</th>
+                <th>Student ID</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMembers.length > 0 ? (
+                filteredMembers.map((student) => (
+                  <tr key={student._id}>
+                    <td>{student.fullName || student.username}</td>
+                    <td>{student.studentId}</td>
+                    <td style={{ color: student.isApproved ? "green" : "red" }}>
+                      {student.isApproved ? "Approved" : "Not Approved"}
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => {
+                          setSelectedUser(student);
+                          Swal.fire({
+                            title: "Send Message",
+                            html: `
+                                <input type="text" placeholder="Your message..." id="message" class="swal2-input" value="${messageContent}">
+                              `,
+                            preConfirm: () => {
+                              const input =
+                                Swal.getPopup().querySelector("#message");
+                              if (input.value) {
+                                setMessageContent(input.value);
+                              }
+                            },
+                            confirmButtonText: "Send",
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              handleSendMessage();
+                            }
+                          });
+                        }}
+                        style={{
+                          padding: "10px",
+                          backgroundColor: "#4CAF50",
+                          borderRadius: "5px",
+                          border: "none",
+                          color: "#fff",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faPaperPlane} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center" }}>
+                    No members found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default GroupDetailsWithSearch;

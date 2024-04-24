@@ -1,30 +1,69 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperPlane, faPaperclip } from "@fortawesome/free-solid-svg-icons";
-import Swal from "sweetalert2"; // For error handling
+import {
+  faPaperPlane,
+  faPaperclip,
+  faSearch,
+} from "@fortawesome/free-solid-svg-icons";
+import Swal from "sweetalert2";
+import { jwtDecode } from "jwt-decode";
 import moment from "moment";
-import userImage1 from "../../assets/images/userImg.jpg"; // User images
+import io from "socket.io-client";
 
-const GroupMessage = ({ currentUserId }) => {
+import userImage1 from "../../assets/images/userImg.jpg";
+import userImage2 from "../../assets/images/userImg2.jpg";
+
+const socket = io(process.env.REACT_APP_SOCKET_URL);
+
+const GroupMessage = () => {
   const [groupList, setGroupList] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [groupMessages, setGroupMessages] = useState([]);
+  const [filteredMessages, setFilteredMessages] = useState([]); // For filtered messages
   const [newMessage, setNewMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState(""); // Search term
   const [isLoading, setIsLoading] = useState(false);
 
-  const serverUrl = process.env.REACT_APP_API_BASE_URL; // Base server URL
-  const token = localStorage.getItem("authToken"); // Authorization token
+  const messageListRef = useRef(null);
+
+  const token = localStorage.getItem("authToken");
+  const currentUser = jwtDecode(token);
+  const currentUserId = currentUser.userId;
+
+  const serverUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
-    fetchGroupList(); // Fetch groups on component mount
+    fetchGroupList();
   }, []);
 
   useEffect(() => {
     if (selectedGroup) {
-      fetchGroupMessages(selectedGroup); // Fetch messages when a group is selected
+      fetchGroupMessages(selectedGroup);
+
+      socket.emit("joinGroup", selectedGroup);
+
+      socket.on("newMessage", (message) => {
+        setGroupMessages((prevMessages) => [...prevMessages, message]);
+        scrollToBottom();
+      });
     }
+
+    return () => {
+      socket.off("newMessage");
+    };
   }, [selectedGroup]);
+
+  useEffect(() => {
+    filterMessages();
+    scrollToBottom(); // Scroll to the bottom when the component updates
+  }, [groupMessages, searchTerm]); // Apply search term
+
+  const scrollToBottom = () => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    }
+  };
 
   const fetchGroupList = async () => {
     try {
@@ -33,6 +72,7 @@ const GroupMessage = ({ currentUserId }) => {
           Authorization: `Bearer ${token}`,
         },
       });
+
       setGroupList(response.data.message || []);
     } catch (error) {
       Swal.fire({
@@ -44,7 +84,7 @@ const GroupMessage = ({ currentUserId }) => {
   };
 
   const fetchGroupMessages = async (groupId) => {
-    setIsLoading(true); // Set loading indicator
+    setIsLoading(true);
     try {
       const response = await axios.get(
         `${serverUrl}/group/groups/${groupId}/messages`,
@@ -55,19 +95,13 @@ const GroupMessage = ({ currentUserId }) => {
         }
       );
 
-      // The messages are under response.data.message.messages
-      const messages = response.data.message.messages.map((msg) => ({
-        _id: msg._id,
-        content: msg.content,
-        sender: {
-          _id: msg.sender._id,
-          username: msg.sender.username,
-        },
-        attachment: msg.attachment,
-        createdAt: msg.createdAt,
+      const messages = response.data.message.messages.map((message) => ({
+        ...message,
+        senderName: message.sender.username,
       }));
 
-      setGroupMessages(messages); // Set the group messages in state
+      setGroupMessages(messages);
+      filterMessages(); // Apply filtering when new messages are fetched
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -75,7 +109,7 @@ const GroupMessage = ({ currentUserId }) => {
         text: "Failed to fetch messages for the selected group.",
       });
     } finally {
-      setIsLoading(false); // Reset loading indicator
+      setIsLoading(false);
     }
   };
 
@@ -89,10 +123,11 @@ const GroupMessage = ({ currentUserId }) => {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("groupId", selectedGroup);
-    formData.append("content", newMessage);
-    formData.append("senderId", currentUserId);
+    const formData = {
+      groupId: selectedGroup,
+      content: newMessage,
+      senderId: currentUserId,
+    };
 
     try {
       const response = await axios.post(
@@ -105,8 +140,13 @@ const GroupMessage = ({ currentUserId }) => {
         }
       );
 
-      setGroupMessages([...groupMessages, response.data.message]); // Add the new message to the list
-      setNewMessage(""); // Clear the message input
+      socket.emit("sendMessage", response.data.message);
+
+      setGroupMessages((prevMessages) => [
+        ...prevMessages,
+        response.data.message,
+      ]);
+      setNewMessage("");
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -116,9 +156,22 @@ const GroupMessage = ({ currentUserId }) => {
     }
   };
 
+  const filterMessages = () => {
+    const filtered = groupMessages.filter((message) =>
+      message.content.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredMessages(filtered);
+  };
+
   return (
     <div style={{ padding: "20px", backgroundColor: "#f0f0f0" }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <h3>Group Messages</h3>
         <select
           value={selectedGroup}
@@ -139,18 +192,34 @@ const GroupMessage = ({ currentUserId }) => {
             </option>
           ))}
         </select>
+        <div>
+          <FontAwesomeIcon icon={faSearch} style={{ cursor: "pointer" }} />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search messages..."
+            style={{
+              padding: "5px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              marginLeft: "10px",
+            }}
+          />
+        </div>
       </div>
 
       {isLoading ? (
         <div>Loading messages...</div>
       ) : (
         <div
+          ref={messageListRef}
           style={{ maxHeight: "300px", overflowY: "auto", margin: "10px 0" }}
         >
-          {groupMessages.length === 0 ? (
+          {filteredMessages.length === 0 ? (
             <div>No messages found</div>
           ) : (
-            groupMessages.map((message) => (
+            filteredMessages.map((message) => (
               <div key={message._id} style={{ margin: "10px 0" }}>
                 <div
                   style={{
@@ -159,11 +228,12 @@ const GroupMessage = ({ currentUserId }) => {
                       message.sender._id === currentUserId
                         ? "flex-end"
                         : "flex-start",
+                    alignItems: "center",
                   }}
                 >
                   {message.sender._id !== currentUserId && (
                     <img
-                      src={userImage1} // Default user image
+                      src={userImage1}
                       alt="Sender"
                       style={{
                         width: "30px",
@@ -181,16 +251,13 @@ const GroupMessage = ({ currentUserId }) => {
                           : "#f8d7da",
                       padding: "10px",
                       borderRadius: "10px",
+                      textAlign: "left",
                     }}
                   >
+                    <strong>{message.senderName}</strong>
+                    <br />
                     {message.content}
-                    <div
-                      style={{
-                        fontSize: "0.8em",
-                        color: "#666",
-                        textAlign: "right",
-                      }}
-                    >
+                    <div style={{ fontSize: "0.8em", color: "#666" }}>
                       {moment(message.createdAt).fromNow()}
                     </div>
                   </div>
@@ -201,7 +268,13 @@ const GroupMessage = ({ currentUserId }) => {
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <FontAwesomeIcon
           icon={faPaperclip}
           onClick={() => document.getElementById("fileInput").click()}
@@ -229,7 +302,7 @@ const GroupMessage = ({ currentUserId }) => {
         <FontAwesomeIcon
           icon={faPaperPlane}
           onClick={handleSendMessage}
-          style={{ cursor: "pointer" }}
+          style={{ cursor: "pointer", color: "#007bff" }}
         />
       </div>
     </div>

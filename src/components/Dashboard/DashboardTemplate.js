@@ -70,9 +70,9 @@ class DashboardTemplate extends Component {
         display: admin || instructor,
       },
       {
-        name: "Analytics",
+        name: "Group",
         iconName: faChartLine,
-        link: "/dashboard/instructors",
+        link: "/dashboard/userGroup",
         display: admin,
       },
       {
