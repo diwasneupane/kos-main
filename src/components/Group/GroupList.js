@@ -11,24 +11,12 @@ import ModalWindow from "../../utils/ModalWindow";
 import GroupAddModal from "./GroupAddModal";
 import Swal from "sweetalert2";
 import Switch from "react-switch";
-import { jwtDecode } from "jwt-decode";
 
-const getAuthToken = () => localStorage.getItem("authToken");
-
-const getUserRoleFromToken = () => {
-  const token = getAuthToken();
-  if (!token) return null;
-
-  try {
-    const decodedToken = jwtDecode(token);
-    const role = decodedToken.role;
-    console.log(role);
-    return role;
-  } catch (error) {
-    console.error("Error decoding token:", error);
-    return null;
-  }
-};
+import {
+  isAuthenticated,
+  getAuthToken,
+  getUserRoleFromToken,
+} from "../../utils/Auth";
 
 const GroupList = () => {
   const [groupList, setGroupList] = useState([]);
@@ -38,10 +26,9 @@ const GroupList = () => {
   const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    const role = getUserRoleFromToken();
-    setUserRole(role);
-    if (role !== "student") {
+    if (isAuthenticated()) {
       fetchGroupList();
+      setUserRole(getUserRoleFromToken()); // Get the role from the token
     }
   }, []);
 
@@ -74,8 +61,6 @@ const GroupList = () => {
 
   const addGroup = async (groupData) => {
     const token = getAuthToken();
-    if (!token || userRole === "student") return;
-
     try {
       const response = await axios.post(
         `${process.env.REACT_APP_API_BASE_URL}/group/group`,
@@ -101,7 +86,6 @@ const GroupList = () => {
   };
 
   const editGroup = (group) => {
-    if (userRole === "student") return;
     setEdit(true);
     setEditData(group);
     toggleAddGroupModal(); // Open the modal for editing
@@ -109,8 +93,6 @@ const GroupList = () => {
 
   const handleEditGroup = async (groupData) => {
     const token = getAuthToken();
-    if (!token || userRole === "student") return;
-
     try {
       const response = await axios.patch(
         `${process.env.REACT_APP_API_BASE_URL}/group/groups/${editData._id}`,
@@ -137,6 +119,7 @@ const GroupList = () => {
     } catch (error) {
       Swal.fire({
         icon: "error",
+        title: "Error",
         text: "An error occurred while updating the group.",
       });
     }
@@ -144,8 +127,6 @@ const GroupList = () => {
 
   const deleteGroup = async (groupId) => {
     const token = getAuthToken();
-    if (!token || userRole === "student") return;
-
     try {
       const response = await axios.delete(
         `${process.env.REACT_APP_API_BASE_URL}/group/groups/${groupId}`,
@@ -173,60 +154,22 @@ const GroupList = () => {
     }
   };
 
-  const toggleAtRiskStatus = async (groupId, currentAtRisk) => {
-    if (userRole === "student") return;
-
-    const newAtRiskStatus = !currentAtRisk; // Toggle the current status
-    const token = getAuthToken();
-
-    try {
-      const response = await axios.patch(
-        `${process.env.REACT_APP_API_BASE_URL}/group/groups/${groupId}/flag-at-risk`,
-        { atRisk: newAtRiskStatus },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 200) {
-        const updatedGroupList = groupList.map((group) =>
-          group._id === groupId ? { ...group, atRisk: newAtRiskStatus } : group
-        );
-        setGroupList(updatedGroupList);
-
-        Swal.fire({
-          icon: "success",
-          title: "Status Updated",
-          text: "The group's 'at risk' status has been updated!",
-        });
-      }
-    } catch (error) {
-      Swal.fire({
-        icon: "error",
-        text: "An error occurred while toggling the 'at risk' status.",
-      });
-    }
-  };
-
   return (
     <div className="dataContainerBox">
-      {userRole !== "student" && ( // Only show if the user is not a student
-        <AppButton
-          name="Add Group"
-          customStyle="addBtnColor"
-          icon={faPlus}
-          onClick={toggleAddGroupModal}
-        />
-      )}
+      <AppButton
+        name="Add Group"
+        customStyle="addBtnColor"
+        icon={faPlus}
+        onClick={toggleAddGroupModal}
+        disabled={userRole === "student"} // Disable if user role is student
+      />
       <table className="table customTable mt-3">
         <thead className="text-center">
           <tr>
             <th className="w-20%">Group Name</th>
             <th className="w-20%">Instructor</th>
             <th className="w-20%">Students</th>
-            <th className="w-20%">Projects</th>
+            <th class="w-20%">Projects</th>
             <th className="w-20%">Actions</th>
           </tr>
         </thead>
@@ -249,38 +192,26 @@ const GroupList = () => {
                         toggleAtRiskStatus(group._id, group.atRisk)
                       }
                       checked={group.atRisk}
+                      disabled={userRole === "student"} // Disable if user role is student
                       boxShadow="0px 1px 5px rgba(0, 0, 0, 0.5)"
-                      offColor="#2DBFCD" // 'Off' color
-                      onColor="#FFA500" // 'On' color
+                      offColor="#2DBFCD"
+                      onColor="#FFA500"
                       uncheckedIcon={false}
                       checkedIcon={false}
                       height={18}
                       width={36}
-                      // style={{
-                      //   cursor:
-                      //     userRole === "student" ? "not-allowed" : "pointer",
-                      // }}
-                      disabled={userRole === "student"} // Disable for students
                     />
                     <FontAwesomeIcon
                       icon={faPenToSquare}
                       className="actionIcons editIcon"
                       onClick={() => editGroup(group)}
-                      style={{
-                        cursor:
-                          userRole === "student" ? "not-allowed" : "pointer",
-                      }}
-                      // disabled={userRole === "student"} // Disable for students
+                      disabled={userRole === "student"} // Disable if user role is student
                     />
                     <FontAwesomeIcon
                       icon={faTrashAlt}
                       className="actionIcons deleteIcon"
                       onClick={() => deleteGroup(group._id)}
-                      style={{
-                        cursor:
-                          userRole === "student" ? "not-allowed" : "pointer",
-                      }}
-                      disabled={userRole === "student"} // Disable for students
+                      disabled={userRole === "student"} // Disable if user role is student
                     />
                   </div>
                 </td>
@@ -307,7 +238,7 @@ const GroupList = () => {
             editData={editData}
             toggleModal={toggleAddGroupModal}
             onSubmit={edit ? handleEditGroup : addGroup}
-            disabled={userRole === "student"} // Disable for students
+            disabled={userRole === "student"} // Disable if user role is student
           />
         }
       />
