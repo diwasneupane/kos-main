@@ -7,7 +7,7 @@ import {
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import NotificationPanel from "./NotificationPanel";
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from "jwt-decode"; // Corrected import
 import getUserRoles from "../utils/Permissions";
 import userImg from "../assets/images/userImg.jpg";
 
@@ -15,6 +15,7 @@ class Header extends Component {
   state = {
     username: "",
     userRoles: [],
+    unreadNotificationCount: 0,
   };
 
   componentDidMount() {
@@ -23,7 +24,7 @@ class Header extends Component {
       try {
         const decodedToken = jwtDecode(token);
         const username = decodedToken.username || "User";
-        const userRoles = getUserRoles(); // Get roles using the function provided
+        const userRoles = getUserRoles();
         this.setState({ username, userRoles });
       } catch (error) {
         console.error("Error decoding JWT token:", error);
@@ -31,16 +32,20 @@ class Header extends Component {
     }
   }
 
+  handleNotificationCountUpdate = (count) => {
+    this.setState({ unreadNotificationCount: count });
+  };
+
   handleNotificationClick = () => {
     const panel = document.getElementById("nPanel");
     if (panel) {
-      panel.classList?.toggle("panelHeight");
+      panel.classList.toggle("panelHeight");
     }
   };
 
   render() {
-    const { toggleSidebar, searchData, handleSearch, onLogout } = this.props;
-    const { username, userRoles } = this.state;
+    const { toggleSidebar, searchData, handleSearch } = this.props;
+    const { username, userRoles, unreadNotificationCount } = this.state;
 
     const userType = userRoles.length > 0 ? userRoles[0] : "User";
 
@@ -70,12 +75,13 @@ class Header extends Component {
             onClick={this.handleNotificationClick}
           >
             <FontAwesomeIcon icon={faBell} className="bellIcon" />
-            <span className="badge headerBadge">5</span>
+            <span className="badge headerBadge">{unreadNotificationCount}</span>
             <div className="notificationPanel" id="nPanel">
-              <NotificationPanel />
+              <NotificationPanel
+                onUpdateNotificationCount={this.handleNotificationCountUpdate}
+              />
             </div>
           </div>
-
           <div
             className="d-flex align-items-center"
             style={{ margin: "0 10px" }}

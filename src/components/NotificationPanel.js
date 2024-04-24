@@ -1,60 +1,41 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBell,
   faExclamationTriangle,
   faEnvelope,
+  faBell,
 } from "@fortawesome/free-solid-svg-icons";
-import ModalWindow from "../utils/ModalWindow";
-
-const NotificationPanel = () => {
+import Modal from "./ModalNotification";
+const NotificationPanel = ({ onUpdateNotificationCount }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      const userId = "USER_ID"; // Use the actual user ID
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/user-notifications/${userId}`
-      );
-
-      if (response.status === 200) {
-        const fetchedNotifications = response.data.notifications;
-        setNotifications(fetchedNotifications);
-        setUnreadCount(
-          fetchedNotifications.filter((notification) => !notification.isRead)
-            .length
-        );
-      }
-    };
-
-    fetchNotifications();
+    const storedNotifications = localStorage.getItem("notifications");
+    if (storedNotifications) {
+      const parsedNotifications = JSON.parse(storedNotifications);
+      setNotifications(parsedNotifications);
+      setUnreadCount(parsedNotifications.length);
+      onUpdateNotificationCount(parsedNotifications.length); // Update Header
+    }
   }, []);
 
-  const handleNotificationClick = (index) => {
+  const markNotificationAsRead = (index) => {
     const updatedNotifications = [...notifications];
-    const notificationId = updatedNotifications[index]._id;
+    updatedNotifications.splice(index, 1);
+    setNotifications(updatedNotifications);
+    setUnreadCount(updatedNotifications.length);
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
+    onUpdateNotificationCount(updatedNotifications.length); // Update Header
+  };
 
-    // Mark notification as read
-    axios
-      .patch(
-        `${process.env.REACT_APP_API_BASE_URL}/mark-read/${notificationId}`
-      )
-      .then((res) => {
-        if (res.status === 200) {
-          updatedNotifications[index].isRead = true;
-          setUnreadCount(unreadCount - 1);
-        }
-      })
-      .catch((err) =>
-        console.error("Error marking notification as read:", err)
-      );
-
-    setSelectedNotification(updatedNotifications[index]);
-    setShowNotificationModal(true);
+  const handleNotificationClick = (index, notification) => {
+    setSelectedNotification(notification);
+    setIsModalOpen(true);
+    markNotificationAsRead(index); // Mark as read and decrease count
   };
 
   const renderIcon = (type) => {
@@ -64,84 +45,53 @@ const NotificationPanel = () => {
       case "message":
         return <FontAwesomeIcon icon={faEnvelope} color="blue" />;
       default:
-        return <FontAwesomeIcon icon={faBell} color="gray" />;
+        return <FontAwesomeIcon icon={faBell} />;
     }
-  };
-
-  const handleClearAll = () => {
-    const newNotifications = notifications.filter(
-      (notification) => !notification.isRead
-    );
-    setNotifications(newNotifications);
-    setUnreadCount(newNotifications.length);
   };
 
   return (
     <div className="notificationPanelBody">
       <div className="notificationHeader">
-        <span>Notifications</span>
-        <span className="notificationCount">{unreadCount}</span>
+        <FontAwesomeIcon icon={faBell} />
+        {unreadCount > 0 && (
+          <span className="notificationCount">{unreadCount}</span>
+        )}
       </div>
-
-      <div className="notificationBody">
-        {notifications.map((notification, index) => (
-          <div
-            key={index}
-            className={`notificationPanelDataTemplateHolder ${
-              notification.isRead ? "" : "unread"
-            }`}
-            onClick={() => handleNotificationClick(index)}
-          >
-            {renderIcon(notification.type)}
-            <div className="notifyMessageTitle">{notification.message}</div>
-            <div className="font-italic notification-period">
-              {new Date(notification.date).toDateString()}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="notificationFooter">
-        <button onClick={() => setShowNotificationModal(true)}>View All</button>
-      </div>
-
-      <ModalWindow
-        modal={showNotificationModal}
-        toggleModal={() => setShowNotificationModal(false)}
-        modalHeader={
-          selectedNotification ? "Notification Details" : "All Notifications"
-        }
-        size="lg"
-        modalBody={
-          selectedNotification ? (
-            <div>
-              <h4>{selectedNotification.message}</h4>
-              <p>
-                {selectedNotification.description || "No additional details."}
-              </p>
-              <button
-                onClick={() => {
-                  setShowNotificationModal(false);
-                  axios.delete(
-                    `${process.env.REACT_APP_API_BASE_URL}/delete-notification/${selectedNotification._id}`
-                  );
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          ) : (
-            <div>
-              {notifications.map((notification, index) => (
-                <div key={index} className="notificationItem">
-                  {renderIcon(notification.type)} {notification.message}
+      <div class="notificationBody">
+        {notifications.length > 0 ? (
+          notifications.map((notification, index) => (
+            <div
+              key={index}
+              className="notificationItem"
+              onClick={() => handleNotificationClick(index, notification)}
+            >
+              {renderIcon(notification.type)}
+              <div className="notificationText">
+                <strong>{notification.message}</strong>
+                <div className="notificationDate">
+                  {new Date(notification.date).toDateString()}
                 </div>
-              ))}
-              <button onClick={handleClearAll}>Clear All</button>
+              </div>
             </div>
-          )
-        }
-      />
+          ))
+        ) : (
+          <div className="noNotifications">No notifications</div>
+        )}
+      </div>
+      <div className="notificationFooter ">
+        <Link to="/notifications">See all</Link>
+      </div>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        {selectedNotification ? (
+          <div>
+            <h3>Notification Details</h3>
+            <p>{selectedNotification.message}</p>
+            <p>Date: {new Date(selectedNotification.date).toDateString()}</p>
+          </div>
+        ) : (
+          <p>No details available</p>
+        )}
+      </Modal>
     </div>
   );
 };

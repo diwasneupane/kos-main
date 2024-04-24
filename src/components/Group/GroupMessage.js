@@ -1,96 +1,242 @@
-import { faPaperPlane } from "@fortawesome/free-regular-svg-icons";
-import { faCameraAlt, faPaperclip } from "@fortawesome/free-solid-svg-icons";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPaperPlane, faPaperclip } from "@fortawesome/free-solid-svg-icons";
+import Swal from "sweetalert2"; // For error handling
 import moment from "moment";
-import React from "react";
 
-const GroupMessage = (props) => {
+// Image assets for user avatars
+import userImage1 from "../../assets/images/userImg.jpg";
+import userImage2 from "../../assets/images/userImg2.jpg";
+
+const GroupMessage = ({ currentUserId }) => {
+  const [groupList, setGroupList] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState("");
+  const [groupMessages, setGroupMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const serverUrl = process.env.REACT_APP_API_BASE_URL; // Base server URL
+  const token = localStorage.getItem("authToken"); // Authorization token
+
+  useEffect(() => {
+    fetchGroupList(); // Fetch groups on component mount
+  }, []);
+
+  useEffect(() => {
+    if (selectedGroup) {
+      fetchGroupMessages(selectedGroup); // Fetch messages when a group is selected
+    }
+  }, [selectedGroup]);
+
+  const fetchGroupList = async () => {
+    try {
+      const response = await axios.get(`${serverUrl}/group/groups`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setGroupList(response.data.message || []);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to fetch groups.",
+      });
+    }
+  };
+
+  const fetchGroupMessages = async (groupId) => {
+    setIsLoading(true); // Set loading indicator
+    try {
+      const response = await axios.get(
+        `${serverUrl}/group/groups/${groupId}/messages`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Ensure sender's information is populated
+      const messages = response.data.messages.map((message) => ({
+        ...message,
+        senderName: message.sender.username, // Assuming user name is populated
+      }));
+
+      setGroupMessages(messages);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to fetch messages for the selected group.",
+      });
+    } finally {
+      setIsLoading(false); // Reset loading indicator
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (newMessage.trim() === "") {
+      Swal.fire({
+        icon: "warning",
+        title: "Warning",
+        text: "Message content cannot be empty.",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("groupId", selectedGroup);
+    formData.append("content", newMessage);
+    formData.append("senderId", currentUserId);
+
+    try {
+      const response = await axios.post(
+        `${serverUrl}/message/send-message-to-group`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setGroupMessages([...groupMessages, response.data.message]); // Add new message to the list
+      setNewMessage(""); // Clear the message input
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to send the message.",
+      });
+    }
+  };
+
   return (
-    <div className="dataContainerBox">
-      <div className="d-flex justify-content-between">
-        <p className="contentTitle">{props.selectedGroup}</p>
-        <div>
-          <select
-            name="selectedGroup"
-            value={props.selectedGroup}
-            className="form-select"
-            onChange={props.handleChange}
-          >
-            <option value="" disabled>
-              Choose group
+    <div style={{ padding: "20px", backgroundColor: "#f0f0f0" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignitems: "center",
+        }}
+      >
+        <h3>Group Messages</h3>
+        <select
+          value={selectedGroup}
+          onChange={(e) => setSelectedGroup(e.target.value)}
+          style={{
+            padding: "10px",
+            borderRadius: "5px",
+            backgroundColor: "#fff",
+            border: "1px solid #ccc",
+          }}
+        >
+          <option value="" disabled>
+            Select a group
+          </option>
+          {groupList.map((group) => (
+            <option key={group._id} value={group._id}>
+              {group.name}
             </option>
-            {props.groupList.length > 0
-              ? props.groupList.map((item, idx) => {
-                  return (
-                    <option value={item.groupName} key={idx}>
-                      {item.groupName}
-                    </option>
-                  );
-                })
-              : "No groups added"}
-          </select>
-        </div>
+          ))}
+        </select>
       </div>
-      <div className="messageBox">
-        <div className="chatDiv">
-          {props.groupChat.length > 0
-            ? props.groupChat.map((message, mIdx) => {
-                if (message.userId === 1) {
-                  //later will be changed by user identification
-                  return (
-                    <div key={mIdx} className="messageRowMine">
-                      <div className="text-end">
-                        <div className="messageBubble">{message.message}</div>
-                        <span className="messageDate me-2">
-                          {moment(message.date).fromNow()}
-                        </span>
-                      </div>
-                      <img
-                        src={message.userImg}
-                        className="userMessageIcon"
-                        alt="User message"
-                      />
+
+      {isLoading ? (
+        <div>Loading messages...</div>
+      ) : (
+        <div
+          style={{ maxHeight: "300px", overflowY: "auto", margin: "10px 0" }}
+        >
+          {groupMessages.length === 0 ? (
+            <div>No messages found</div>
+          ) : (
+            groupMessages.map((message) => (
+              <div key={message._id} style={{ margin: "10px 0" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent:
+                      message.sender === currentUserId
+                        ? "flex-end"
+                        : "flex-start",
+                    alignitems: "center",
+                  }}
+                >
+                  {message.sender !== currentUserId && (
+                    <img
+                      src={userImage1} // Default user image
+                      alt="Sender"
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "50%",
+                        marginRight: "10px",
+                      }}
+                    />
+                  )}
+                  <div
+                    style={{
+                      backgroundColor:
+                        message.sender === currentUserId
+                          ? "#d1e7dd"
+                          : "#f8d7da",
+                      padding: "10px",
+                      borderRadius: "10px",
+                      textAlign: "left",
+                    }}
+                  >
+                    {message.content}
+                    <div style={{ fontSize: "0.8em", color: "#666" }}>
+                      {moment(message.createdAt).fromNow()}
                     </div>
-                  );
-                } else {
-                  return (
-                    <div key={mIdx} className="messageRow">
-                      <img
-                        src={message.userImg}
-                        className="userMessageIcon"
-                        alt="User message"
-                      />
-                      <div className="text-end">
-                        <div className="messageBubble1">
-                          <span>{message.user}</span>
-                          <br></br>
-                          {message.message}
-                        </div>
-                        <span className="messageDate">
-                          {moment(message.date).fromNow()}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }
-              })
-            : null}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-        <div className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faPaperclip} className="chatIcons" />
-          <div style={{ flex: 1, margin: "0 10px" }}>
-            <input
-              type="text"
-              name="message"
-              value={props.message}
-              onChange={props.handleChange}
-              className="form-control"
-              placeholder="Write your message"
-            />
-          </div>
-          <FontAwesomeIcon icon={faCameraAlt} className="chatIcons" />
-          <FontAwesomeIcon icon={faPaperPlane} className="chatIcons" />
-        </div>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          alignitems: "center",
+          justifycontent: "space-between",
+        }}
+      >
+        <FontAwesomeIcon
+          icon={faPaperclip}
+          onClick={() => document.getElementById("fileInput").click()}
+          style={{ cursor: "pointer" }}
+        />
+        <input
+          id="fileInput"
+          type="file"
+          style={{ display: "none" }}
+          onChange={() => console.log("File selected")} // Placeholder for file selection
+        />
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          style={{
+            flex: 1,
+            padding: "10px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+            margin: "0 10px",
+          }}
+          placeholder="Write your message..."
+        />
+        <FontAwesomeIcon
+          icon={faPaperPlane}
+          onClick={handleSendMessage}
+          style={{ cursor: "pointer" }}
+        />
       </div>
     </div>
   );
