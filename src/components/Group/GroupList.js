@@ -13,6 +13,7 @@ import Swal from "sweetalert2";
 
 import Switch from "react-switch";
 import { jwtDecode } from "jwt-decode";
+import { getUserRoleFromToken } from "../../utils/Auth";
 
 const getAuthToken = () => localStorage.getItem("authToken");
 
@@ -22,18 +23,34 @@ const GroupList = () => {
   const [editData, setEditData] = useState(null);
   const [edit, setEdit] = useState(false);
   const [userRole, setUserRole] = useState("");
+
   useEffect(() => {
     fetchGroupList();
     const token = getAuthToken();
     if (token) {
       const decoded = jwtDecode(token);
-      setUserRole(decoded.role || "user"); // Default to 'user' if role not found
+      setUserRole(decoded.role || "user");
     }
   }, []);
 
   const fetchGroupList = async () => {
-    const token = getAuthToken();
+    const token = localStorage.getItem("authToken");
+    const decodedToken = jwtDecode(token);
+    const userId = decodedToken._id;
+
     try {
+      if (!token) {
+        console.error("No token found.");
+        return;
+      }
+
+      const userRole = getUserRoleFromToken(token);
+
+      if (!userRole) {
+        console.error("No role found in the token.");
+        return;
+      }
+
       const response = await axios.get(
         `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
         {
@@ -42,7 +59,22 @@ const GroupList = () => {
           },
         }
       );
-      setGroupList(response.data.message);
+
+      let filteredGroups;
+
+      if (userRole === "admin") {
+        filteredGroups = response.data.message;
+      } else if (userRole === "student" || userRole === "instructor") {
+        filteredGroups = response.data.message.filter((group) => {
+          if (userRole === "student") {
+            return group.students.some((student) => student._id === userId);
+          } else {
+            return group.instructor._id === userId;
+          }
+        });
+      }
+
+      setGroupList(filteredGroups);
     } catch (error) {
       console.error("Error fetching groups:", error);
       Swal.fire({
@@ -64,8 +96,9 @@ const GroupList = () => {
       });
     }
   };
+
   const toggleAtRiskStatus = async (groupId, currentAtRisk) => {
-    const newAtRiskStatus = !currentAtRisk; // Toggle the current status
+    const newAtRiskStatus = !currentAtRisk;
     const token = getAuthToken();
 
     try {
@@ -84,16 +117,6 @@ const GroupList = () => {
           group._id === groupId ? { ...group, atRisk: newAtRiskStatus } : group
         );
         setGroupList(updatedGroupList);
-
-        addNotification({
-          type: "at-risk",
-          message: `Group "${
-            groupList.find((g) => g._id === groupId).name
-          }" has been flagged as ${
-            newAtRiskStatus ? "at risk" : "not at risk"
-          }.`,
-          date: new Date(),
-        });
 
         Swal.fire({
           icon: "success",
@@ -133,7 +156,7 @@ const GroupList = () => {
 
       if (response.status === 201) {
         setGroupList([...groupList, response.data.message]);
-        toggleAddGroupModal(); // Close the modal after adding
+        toggleAddGroupModal();
       }
     } catch (error) {
       console.error("Error adding group:", error);
@@ -147,10 +170,9 @@ const GroupList = () => {
 
   const editGroup = (group) => {
     if (userRole !== "student") {
-      // Only allow editing if the role is not 'student'
       setEdit(true);
       setEditData(group);
-      setAddGroupModal(true); // Open the modal for editing
+      setAddGroupModal(true);
     } else {
       Swal.fire({
         icon: "warning",
@@ -172,7 +194,7 @@ const GroupList = () => {
           },
         }
       );
-      console.log("Full response:", response);
+
       if (response && response.status === 200) {
         const updatedGroupList = groupList.map((group) =>
           group._id === editData._id ? { ...response.data.message } : group
@@ -258,52 +280,76 @@ const GroupList = () => {
         icon={faPlus}
         onClick={toggleAddGroupModal}
       />
-      <table className="table customTable mt-3">
-        <thead className="text-center">
+      <table className="table w-full mt-3">
+        <thead>
           <tr>
-            <th className="w-20%">Group Name</th>
-            <th className="w-20%">Instructor</th>
-            <th className="w-20%">Students</th>
-            <th className="w-20%">Projects</th>
-            <th className="w-20%">Actions</th>
+            <th className="py-2 px-4 text-center">Group Name</th>
+            <th className="py-2 px-4 text-center">Instructor</th>
+            <th className="py-2 px-4 text-center">Students</th>
+            <th className="py-2 px-4 text-center">Projects</th>
+            <th className="py-2 px-4 text-center">Raise A Flag</th>
+            <th className="py-2 px-4 text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
           {groupList.length > 0 ? (
             groupList.map((group) => (
-              <tr key={group._id} className="text-center ">
-                <td className="tableData">{group.name}</td>
-                <td>{group.instructor ? group.instructor.username : "N/A"}</td>
-                <td>
-                  {group.students.map((student) => student.username).join(", ")}
+              <tr key={group._id} className="text-center">
+                <td className="py-2 px-4">{group.name}</td>
+                <td className="py-2 px-4">
+                  {group.instructor ? group.instructor.username : "N/A"}
                 </td>
-                <td>
+                <td className="py-2 px-4">
+                  <span>{group.students.length}</span>
+                </td>
+                <td className="py-2 px-4">
                   {group.projects.map((project) => project.title).join(", ")}
                 </td>
-                <td>
-                  <div className="d-flex justify-content-around align-items-center">
+                <td className="py-2 px-4">
+                  {userRole === "student" ? (
+                    <span>{group.students.length}</span>
+                  ) : (
                     <Switch
                       onChange={() =>
                         toggleAtRiskStatus(group._id, group.atRisk)
                       }
                       checked={group.atRisk}
                       boxShadow="0px 1px 5px rgba(0, 0, 0, 0.5)"
-                      offColor="#2DBFCD" // Aesthetic choice for 'off' state
-                      onColor="#FFA500" // Aesthetic choice for 'on' state
-                      uncheckedIcon={false} // Hides the icons for simplicity
+                      offColor="#2DBFCD"
+                      onColor="#FFA500"
+                      uncheckedIcon={false}
                       checkedIcon={false}
                       height={18}
                       width={36}
                     />
+                  )}
+                </td>
+                <td className="py-2 px-4">
+                  <div className="flex justify-center">
                     <FontAwesomeIcon
                       icon={faPenToSquare}
-                      className="actionIcons editIcon"
+                      className="actionIcons editIcon cursor-pointer"
                       onClick={() => editGroup(group)}
+                      style={{
+                        paddingRight: "2rem",
+                        borderRight: "1px solid #ccc",
+                        marginBottom: "1rem",
+                        "@media (max-width: 768px)": {
+                          fontSize: "1.5rem",
+                        },
+                      }}
                     />
                     <FontAwesomeIcon
                       icon={faTrashAlt}
-                      className="actionIcons deleteIcon"
+                      className="actionIcons deleteIcon cursor-pointer pl-2"
                       onClick={() => deleteGroup(group._id)}
+                      style={{
+                        paddingLeft: "2rem",
+                        marginBottom: "1rem",
+                        "@media (max-width: 768px)": {
+                          fontSize: "1.5rem",
+                        },
+                      }}
                     />
                   </div>
                 </td>
@@ -311,7 +357,7 @@ const GroupList = () => {
             ))
           ) : (
             <tr>
-              <td colSpan={5} className="text-center">
+              <td colSpan={6} className="py-4 px-4 text-center">
                 No groups found
               </td>
             </tr>
@@ -321,16 +367,16 @@ const GroupList = () => {
 
       <ModalWindow
         modal={addGroupModal}
-        toggleModal={toggleAddGroupModal} // This is correct
+        toggleModal={toggleAddGroupModal}
         modalHeader={edit ? "Edit Group" : "Add Group"}
         size="lg"
         modalBody={
           <GroupAddModal
             edit={edit}
             editData={editData}
-            toggleModal={toggleAddGroupModal} // Make sure this is passed
-            onSubmit={edit ? handleEditGroup : addGroup} // Ensure correct handling
-            onGroupAdded={fetchGroupList} // If there's a prop for after a group is added
+            toggleModal={toggleAddGroupModal}
+            onSubmit={edit ? handleEditGroup : addGroup}
+            onGroupAdded={fetchGroupList}
           />
         }
       />

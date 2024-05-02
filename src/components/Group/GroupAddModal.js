@@ -74,12 +74,16 @@ const GroupAddModal = (props) => {
       newErrors.projects = "At least one project must be selected.";
     }
 
+    if (groupStudent.length === 0 || projects.length === 0) {
+      newErrors.dropdowns = "Students and projects must be selected.";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) {
+    if (!validateForm() || !validateDropdowns()) {
       return;
     }
 
@@ -125,12 +129,12 @@ const GroupAddModal = (props) => {
           "success"
         );
         props.toggleModal();
-        props.onGroupAdded(); // Fetch the updated group list
+        props.onGroupAdded();
       } else {
         throw new Error("Unexpected status code");
       }
     } catch (error) {
-      console.error("Error creating or updating group:", error); // Log the error
+      console.error("Error creating or updating group:", error);
 
       const errorMsg =
         error.response?.data?.message || "Unknown error occurred.";
@@ -138,11 +142,23 @@ const GroupAddModal = (props) => {
     }
   };
 
+  const validateDropdowns = () => {
+    const dropdowns = [instructor, ...groupStudent, ...projects];
+    const allSelected = dropdowns.every((dropdown) => dropdown !== "");
+
+    if (!allSelected) {
+      Swal.fire({
+        icon: "warning",
+        title: "Please select all fields before submitting.",
+      });
+    }
+
+    return allSelected;
+  };
+
   return (
     <div className="container-fluid">
       <h2>{props.edit ? "Update Group" : "Create Group"}</h2>
-
-      {/* Form Fields */}
       <Row className="mb-3">
         <Col md={3}>
           <strong>Group Name</strong>
@@ -159,7 +175,6 @@ const GroupAddModal = (props) => {
           {errors.name && <div className="invalid-feedback">{errors.name}</div>}
         </Col>
       </Row>
-
       <Row className="mb-3">
         <Col md={3}>
           <strong>Instructor</strong>
@@ -185,7 +200,6 @@ const GroupAddModal = (props) => {
           )}
         </Col>
       </Row>
-
       <Row className="mb-3">
         <Col md={3}>
           <strong>Students</strong>
@@ -229,7 +243,6 @@ const GroupAddModal = (props) => {
           )}
         </Col>
       </Row>
-
       <Row className="mb-3">
         <Col md={3}>
           <strong>Projects</strong>
@@ -271,13 +284,19 @@ const GroupAddModal = (props) => {
           )}
         </Col>
       </Row>
-
-      <div className="d-flex justify-content-end">
-        <AppButton
-          style={{ backgroundColor: "#FFA500", color: "white" }}
-          name={props.edit ? "Update" : "Create"}
-          onClick={handleSubmit}
-        />
+      <div>
+        {errors.dropdowns && (
+          <div className="alert alert-danger" role="alert">
+            {errors.dropdowns}
+          </div>
+        )}
+        <div className="d-flex justify-content-end">
+          <AppButton
+            style={{ backgroundColor: "#FFA500", color: "white" }}
+            name={props.edit ? "Update" : "Create"}
+            onClick={handleSubmit}
+          />
+        </div>
       </div>
     </div>
   );

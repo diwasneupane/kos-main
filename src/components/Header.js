@@ -1,11 +1,6 @@
 import React, { Component } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBars,
-  faBell,
-  faEnvelope,
-  faSearch,
-} from "@fortawesome/free-solid-svg-icons";
+import { faBars, faBell } from "@fortawesome/free-solid-svg-icons";
 import NotificationPanel from "./NotificationPanel";
 import { jwtDecode } from "jwt-decode"; // Corrected import
 import getUserRoles from "../utils/Permissions";
@@ -44,7 +39,7 @@ class Header extends Component {
   };
 
   render() {
-    const { toggleSidebar, searchData, handleSearch } = this.props;
+    const { toggleSidebar } = this.props;
     const { username, userRoles, unreadNotificationCount } = this.state;
 
     const userType = userRoles.length > 0 ? userRoles[0] : "User";
@@ -56,19 +51,10 @@ class Header extends Component {
           className="sidebarToggle"
           onClick={toggleSidebar}
         />
-        <div className="searchDiv">
-          <FontAwesomeIcon icon={faSearch} className="searchIcon" />
-          <input
-            type="text"
-            className="searchBar"
-            value={searchData}
-            onChange={handleSearch}
-            placeholder="Search"
-          />
-        </div>
+
         <div className="emptyDiv"></div>
         <div className="userInfoDiv">
-          <FontAwesomeIcon icon={faEnvelope} className="mailIcon" />
+          {/* <FontAwesomeIcon icon={faEnvelope} className="mailIcon" /> */}
           <div
             className="position-relative"
             style={{ cursor: "pointer" }}

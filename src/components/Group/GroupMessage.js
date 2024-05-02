@@ -3,11 +3,12 @@ import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
-import { jwtDecode } from "jwt-decode"; // Correct import for jwt-decode
+import { jwtDecode } from "jwt-decode";
 import moment from "moment";
 import io from "socket.io-client";
+import Scrollbars from "react-custom-scrollbars";
 
-import userImage1 from "../../assets/images/userImg.jpg"; // Sample user image
+import userImage1 from "../../assets/images/userImg.jpg";
 
 const socket = io(process.env.REACT_APP_SOCKET_URL);
 
@@ -17,19 +18,18 @@ const GroupMessage = () => {
   const [groupMessages, setGroupMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const messageListRef = useRef(null);
 
   const token = localStorage.getItem("authToken");
-  const decodedToken = jwtDecode(token); // Correct jwtDecode usage
+  const decodedToken = jwtDecode(token);
   const currentUserId = decodedToken._id;
-  console.log("Retrieved token:", currentUserId);
-  // const token = localStorage.getItem("authToken");
 
   const serverUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
-    fetchGroupList(); // Load group list on component mount
+    fetchGroupList();
   }, []);
 
   useEffect(() => {
@@ -39,12 +39,12 @@ const GroupMessage = () => {
     }
 
     return () => {
-      socket.off("newMessage"); // Clean up when the component unmounts or group changes
+      socket.off("newMessage");
     };
   }, [selectedGroup]);
 
   useEffect(() => {
-    scrollToBottom(); // Scroll to the bottom when messages update
+    scrollToBottom();
   }, [groupMessages]);
 
   const scrollToBottom = () => {
@@ -61,7 +61,10 @@ const GroupMessage = () => {
         },
       });
 
-      setGroupList(response.data.message || []); // Set the list of groups
+      setGroupList(response.data.message || []);
+      if (response.data.message && response.data.message.length > 0) {
+        setSelectedGroup(response.data.message[0]._id);
+      }
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -78,7 +81,7 @@ const GroupMessage = () => {
         `${serverUrl}/group/groups/${groupId}/messages`,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // Include the authorization header
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -86,7 +89,7 @@ const GroupMessage = () => {
       const messages = response.data.message.messages.map((message) => ({
         ...message,
         senderName: message.sender.username,
-        isCurrentUser: message.sender._id === currentUserId, // Check if the sender is the current user
+        isCurrentUser: message.sender._id === currentUserId,
       }));
 
       setGroupMessages(messages);
@@ -97,7 +100,7 @@ const GroupMessage = () => {
         text: "Failed to fetch messages for the selected group.",
       });
     } finally {
-      setIsLoading(false); // Hide loading when done
+      setIsLoading(false);
     }
   };
 
@@ -111,7 +114,6 @@ const GroupMessage = () => {
       return;
     }
 
-    // Disable interaction while waiting for server response
     setIsLoading(true);
 
     const data = {
@@ -140,9 +142,8 @@ const GroupMessage = () => {
         senderName: decodedToken.username,
       };
 
-      // Only update messages after server response
       setGroupMessages((prevMessages) => [...prevMessages, newMessageObj]);
-      setNewMessage(""); // Clear input after successful submission
+      setNewMessage("");
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -150,150 +151,160 @@ const GroupMessage = () => {
         text: "Failed to send the message.",
       });
     } finally {
-      setIsLoading(false); // Re-enable interaction after completion
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    setSelectedFile(e.target.files[0]);
+  };
+
+  const handleFileDownload = () => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      window.open(url);
     }
   };
 
   return (
-    <div style={{ padding: "20px", backgroundColor: "#f0f0f0" }}>
+    <div style={{ display: "flex", height: "70vh" }}>
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          width: "20%",
+          backgroundColor: "#2d3748",
+          color: "#fff",
+          padding: "20px",
+          overflowY: "auto",
+          boxShadow: "3px 0 6px rgba(0, 0, 0, 0.1)",
         }}
       >
-        <h3>Group Messages</h3>
-        <select
-          value={selectedGroup}
-          onChange={(e) => setSelectedGroup(e.target.value)}
-          style={{
-            padding: "10px",
-            borderRadius: "5px",
-            backgroundColor: "#fff",
-            border: "1px solid #ccc",
-          }}
-        >
-          <option value="" disabled>
-            Select a group
-          </option>
+        <h3 style={{ marginBottom: "20px" }}>Groups</h3>
+        <ul style={{ listStyle: "none", padding: "0" }}>
           {groupList.map((group) => (
-            <option key={group._id} value={group._id}>
+            <li
+              key={group._id}
+              style={{
+                marginBottom: "10px",
+                cursor: "pointer",
+                padding: "10px",
+                borderRadius: "5px",
+                backgroundColor:
+                  selectedGroup === group._id ? "#4a5568" : "inherit",
+                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+              }}
+              onClick={() => setSelectedGroup(group._id)}
+            >
               {group.name}
-            </option>
+            </li>
           ))}
-        </select>
+        </ul>
       </div>
-
-      {isLoading ? (
-        <div>Loading messages...</div>
-      ) : (
-        <div
-          ref={messageListRef}
-          style={{ maxHeight: "300px", overflowY: "auto", margin: "10px 0" }}
-        >
-          {groupMessages.length === 0 ? (
-            <div>No messages found</div>
-          ) : (
-            groupMessages.map((message) => (
-              <div key={message._id} style={{ margin: "10px 0" }}>
+      <div style={{ padding: "20px", backgroundColor: "#edf2f7", flex: 1 }}>
+        {isLoading ? (
+          <div>Loading messages...</div>
+        ) : (
+          <Scrollbars
+            autoHide
+            autoHideTimeout={1000}
+            autoHideDuration={200}
+            style={{ maxHeight: "400px" }}
+          >
+            <div ref={messageListRef} style={{ marginBottom: "10px" }}>
+              {groupMessages.map((message) => (
                 <div
+                  key={message._id}
                   style={{
+                    marginBottom: "10px",
                     display: "flex",
                     justifyContent: message.isCurrentUser
                       ? "flex-end"
-                      : "flex-start", // Align messages based on whether they are from the current user or others
-                    alignItems: "center",
+                      : "flex-start",
                   }}
                 >
-                  {message.isCurrentUser ? (
-                    <div
-                      style={{
-                        backgroundColor: "#d1e7dd", // Background color for messages sent by the current user
-                        padding: "10px",
-                        borderRadius: "10px",
-                        textAlign: "left",
-                      }}
-                    >
-                      <strong>{message.senderName}</strong>
-                      <br />
-                      {message.content}
-                      <div style={{ fontSize: "0.8em", color: "#666" }}>
-                        {moment(message.createdAt).fromNow()}
-                      </div>
+                  <div
+                    style={{
+                      backgroundColor: message.isCurrentUser
+                        ? "#d1e7dd"
+                        : "#f8d7da",
+                      padding: "10px",
+                      borderRadius: "10px",
+                      textAlign: "left",
+                      boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                    }}
+                  >
+                    <strong>{message.senderName}</strong>
+                    <br />
+                    {message.content}
+                    <div style={{ fontSize: "0.8em", color: "#666" }}>
+                      {moment(message.createdAt).fromNow()}
                     </div>
-                  ) : (
-                    <>
-                      <img
-                        src={userImage1}
-                        alt="Sender"
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          borderRadius: "50%",
-                          marginRight: "10px",
-                        }}
-                      />
-                      <div
-                        style={{
-                          backgroundColor: "#f8d7da", // Background color for messages from others
-                          padding: "10px",
-                          borderRadius: "10px",
-                          textAlign: "left",
-                        }}
-                      >
-                        <strong>{message.senderName}</strong>
-                        <br />
-                        {message.content}
-                        <div style={{ fontSize: "0.8em", color: "#666" }}>
-                          {moment(message.createdAt).fromNow()}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+              ))}
+            </div>
+          </Scrollbars>
+        )}
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <FontAwesomeIcon
-          icon={faPaperclip}
-          onClick={() => document.getElementById("fileInput").click()}
-          style={{ cursor: "pointer" }}
-        />
-        <input
-          id="fileInput"
-          type="file"
-          style={{ display: "none" }}
-          onChange={() => console.log("File selected")}
-        />
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+        <div
           style={{
-            flex: 1,
-            padding: "10px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
-            margin: "0 10px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: "20px",
           }}
-          placeholder="Write your message..."
-        />
-        <FontAwesomeIcon
-          icon={faPaperPlane}
-          onClick={handleSendMessage}
-          style={{ cursor: "pointer", color: "#007bff" }}
-        />
+        >
+          <FontAwesomeIcon
+            icon={faPaperclip}
+            onClick={() => document.getElementById("fileInput").click()}
+            style={{ cursor: "pointer" }}
+          />
+          <input
+            id="fileInput"
+            type="file"
+            style={{ display: "none" }}
+            onChange={handleFileSelect}
+          />
+          {selectedFile && (
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <span>{selectedFile.name}</span>
+              <button
+                onClick={handleFileDownload}
+                style={{ marginLeft: "10px" }}
+              >
+                Download
+              </button>
+            </div>
+          )}
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "5px",
+              border: "1px solid #ccc",
+              margin: "0 10px",
+              backgroundColor: "#fff",
+              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+              height: "40px",
+            }}
+            placeholder="Write your message..."
+          />
+          <FontAwesomeIcon
+            icon={faPaperPlane}
+            onClick={handleSendMessage}
+            style={{ cursor: "pointer", color: "#007bff" }}
+          />
+        </div>
       </div>
     </div>
   );

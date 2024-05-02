@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
+import { jwtDecode } from "jwt-decode";
+import { getUserRoleFromToken } from "../../utils/Auth";
 
 const GroupDetailsWithDropdown = () => {
   const [groupList, setGroupList] = useState([]);
@@ -9,17 +11,54 @@ const GroupDetailsWithDropdown = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchGroupList = async () => {
-    const serverUrl = process.env.REACT_APP_API_BASE_URL;
     const token = localStorage.getItem("authToken");
+    const decodedToken = jwtDecode(token); // Correct jwtDecode usage
+    const userId = decodedToken._id;
+    console.log(userId);
     try {
-      const response = await axios.get(`${serverUrl}/group/groups`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setGroupList(response.data.message);
+      if (!token) {
+        console.error("No token found.");
+        return;
+      }
+
+      const userRole = getUserRoleFromToken(token);
+
+      if (!userRole) {
+        console.error("No role found in the token.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log(userId);
+
+      let filteredGroups;
+
+      if (userRole === "admin") {
+        filteredGroups = response.data.message;
+      } else if (userRole === "student" || userRole === "instructor") {
+        filteredGroups = response.data.message.filter((group) => {
+          if (userRole === "student") {
+            return group.students.some((student) => student._id === userId);
+          } else {
+            const comparisonResult = group.instructor._id === userId;
+            console.log("Comparison result:", comparisonResult);
+            return comparisonResult;
+          }
+        });
+      }
+
+      console.log("Filtered groups:", filteredGroups);
+
+      setGroupList(filteredGroups);
     } catch (error) {
-      console.error("Error fetching group list:", error);
+      console.error("Error fetching groups:", error);
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -63,31 +102,50 @@ const GroupDetailsWithDropdown = () => {
       fetchGroupDetails(selectedGroup);
     }
   }, [selectedGroup]);
+  useEffect(() => {
+    if (groupList.length > 0) {
+      setSelectedGroup(groupList[0]._id);
+    }
+  }, [groupList]);
 
   return (
     <div
       style={{ padding: "20px", backgroundColor: "#fff" }}
       className="dataContainerBox"
     >
-      <h2 style={{ marginBottom: "20px" }}>Select a Group to View Details</h2>
-      <select
-        value={selectedGroup}
-        onChange={(e) => setSelectedGroup(e.target.value)}
-        style={{
-          padding: "10px",
-          borderRadius: "5px",
-          marginBottom: "20px",
-          backgroundColor: "#fff",
-          border: "1px solid #ddd",
-        }}
-      >
-        <option value="">-- Select a Group --</option>
-        {groupList.map((group) => (
-          <option key={group._id} value={group._id}>
-            {group.name}
-          </option>
-        ))}
-      </select>
+      <div>
+        <h2 style={{ marginBottom: "20px" }}>
+          {groupList.length === 1
+            ? "View Group Details"
+            : "Select a Group to View Details"}
+        </h2>
+        {groupList.length > 1 && (
+          <select
+            value={selectedGroup}
+            onChange={(e) => setSelectedGroup(e.target.value)}
+            style={{
+              padding: "10px",
+              borderRadius: "5px",
+              marginBottom: "20px",
+              backgroundColor: "#fff",
+              border: "1px solid #ddd",
+            }}
+          >
+            {groupList.map((group) => (
+              <option key={group._id} value={group._id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {groupList.length === 1 && (
+          <div>
+            <h3>{groupList[0].name}</h3>
+            <p>Instructor: {groupList[0].instructor.username}</p>
+            <p>Project: {groupList[0].projects[0].title}</p>
+          </div>
+        )}
+      </div>
 
       {isLoading && (
         <div style={{ fontSize: "1.2em" }}>Loading group details...</div>
