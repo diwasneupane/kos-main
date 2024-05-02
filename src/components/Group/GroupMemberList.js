@@ -14,7 +14,7 @@ const GroupDetailsWithDropdown = () => {
     const token = localStorage.getItem("authToken");
     const decodedToken = jwtDecode(token); // Correct jwtDecode usage
     const userId = decodedToken._id;
-    console.log(userId);
+
     try {
       if (!token) {
         console.error("No token found.");
@@ -36,7 +36,6 @@ const GroupDetailsWithDropdown = () => {
           },
         }
       );
-      console.log(userId);
 
       let filteredGroups;
 
@@ -48,13 +47,10 @@ const GroupDetailsWithDropdown = () => {
             return group.students.some((student) => student._id === userId);
           } else {
             const comparisonResult = group.instructor._id === userId;
-            console.log("Comparison result:", comparisonResult);
             return comparisonResult;
           }
         });
       }
-
-      console.log("Filtered groups:", filteredGroups);
 
       setGroupList(filteredGroups);
     } catch (error) {

@@ -143,7 +143,7 @@ const ProjectPage = () => {
 
   return (
     <Container
-      className=" p-4"
+      className="p-4 "
       style={{ backgroundColor: "white", width: "97%", borderRadius: "5px" }}
     >
       {userRole !== "student" && (
@@ -155,6 +155,7 @@ const ProjectPage = () => {
           }}
           variant="primary"
           onClick={toggleModal}
+          className="mb-3"
         >
           <FontAwesomeIcon icon={faPlus} style={{ color: "white" }} /> Add
           Project
@@ -164,7 +165,7 @@ const ProjectPage = () => {
       {loading ? (
         <div>Loading...</div>
       ) : (
-        <Table className="table customTable mt-3">
+        <Table className="table customTable">
           <thead>
             <tr>
               <th style={{ width: "20%" }}>Project Title</th>
@@ -184,8 +185,12 @@ const ProjectPage = () => {
                 <td>{new Date(project.endDate).toLocaleDateString()}</td>
                 <td>{project.status}</td>
                 {!["student"].includes(userRole) && (
-                  <td>
-                    <Button variant="link" onClick={() => handleEdit(project)}>
+                  <td className="d-flex">
+                    <Button
+                      variant="link"
+                      onClick={() => handleEdit(project)}
+                      className="mr-2"
+                    >
                       <FontAwesomeIcon
                         icon={faEdit}
                         style={{ color: "orange" }}
@@ -245,7 +250,7 @@ const ProjectForm = ({ initialData, onSubmit, onClose }) => {
   };
 
   return (
-    <Form className="container-fluid">
+    <Form className="container-fluid p-4">
       <Form.Group>
         <Form.Label>Project Title</Form.Label>
         <Form.Control
@@ -295,31 +300,33 @@ const ProjectForm = ({ initialData, onSubmit, onClose }) => {
           <option value="Completed">Completed</option>
         </Form.Control>
       </Form.Group>
-      <br />
-      <Button
-        style={{
-          borderRadius: "5px",
-          border: "0",
-          backgroundColor: "#2DBFCD",
-          marginRight: "5px",
-        }}
-        variant="primary"
-        onClick={handleFormSubmit}
-      >
-        Submit
-      </Button>
-
-      <Button
-        style={{
-          borderRadius: "5px",
-          border: "0",
-          backgroundColor: "#FFA500",
-        }}
-        variant="secondary"
-        onClick={onClose}
-      >
-        Close
-      </Button>
+      <div className="text-center mt-4">
+        {" "}
+        {/* Center align the buttons */}
+        <Button
+          style={{
+            borderRadius: "5px",
+            border: "0",
+            backgroundColor: "#2DBFCD",
+            marginRight: "5px",
+          }}
+          variant="primary"
+          onClick={handleFormSubmit}
+        >
+          Submit
+        </Button>
+        <Button
+          style={{
+            borderRadius: "5px",
+            border: "0",
+            backgroundColor: "#FFA500",
+          }}
+          variant="secondary"
+          onClick={onClose}
+        >
+          Close
+        </Button>
+      </div>
     </Form>
   );
 };

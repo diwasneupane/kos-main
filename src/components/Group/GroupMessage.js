@@ -17,7 +17,7 @@ import userImg1 from "../../assets/images/userImg.jpg";
 import defaultAvatar from "../../assets/images/userImg2.jpg";
 
 import { IconContext } from "react-icons";
-import { RiFilePdfLine, RiFileWordLine } from "react-icons/ri";
+import { RiFilePdf2Fill, RiFilePdfLine, RiFileWordLine } from "react-icons/ri";
 
 const socket = io(process.env.REACT_APP_SOCKET_URL);
 
@@ -116,22 +116,24 @@ const GroupMessage = () => {
   };
 
   const handleSendMessage = async () => {
-    if (newMessage.trim() === "") {
+    if (newMessage.trim() === "" && !selectedFile) {
       Swal.fire({
         icon: "warning",
         title: "Warning",
-        text: "Message content cannot be empty.",
+        text: "Message content or file cannot be empty.",
       });
       return;
     }
 
     setIsLoading(true);
 
-    const data = {
-      groupId: selectedGroup,
-      content: newMessage,
-      senderId: currentUserId,
-    };
+    const data = new FormData();
+    data.append("groupId", selectedGroup);
+    data.append("content", newMessage);
+    data.append("senderId", currentUserId);
+    if (selectedFile) {
+      data.append("file", selectedFile);
+    }
 
     try {
       const response = await axios.post(
@@ -140,6 +142,7 @@ const GroupMessage = () => {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
           },
         }
       );
@@ -156,6 +159,7 @@ const GroupMessage = () => {
 
       setGroupMessages((prevMessages) => [...prevMessages, newMessageObj]);
       setNewMessage("");
+      setSelectedFile(null);
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -178,12 +182,11 @@ const GroupMessage = () => {
     setSelectedFile(e.target.files[0]);
   };
 
-  const handleFileDownload = () => {
-    if (selectedFile) {
-      const url = URL.createObjectURL(selectedFile);
-      window.open(url);
-    }
+  const handleFileDownload = (file) => {
+    const url = URL.createObjectURL(file);
+    window.open(url);
   };
+
   const handleRemoveFile = () => {
     setSelectedFile(null);
   };
@@ -313,7 +316,7 @@ const GroupMessage = () => {
                       >
                         <IconContext.Provider value={{ color: "#007bff" }}>
                           {message.file.type === "application/pdf" ? (
-                            <RiFilePdfLine size={20} />
+                            <RiFilePdf2Fill size={20} />
                           ) : (
                             <RiFileWordLine size={20} />
                           )}

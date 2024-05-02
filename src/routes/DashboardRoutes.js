@@ -9,7 +9,6 @@ import ErrorPage from "../pages/ErrorPage";
 import StudentProjectPage from "../pages/StudentProjectPage";
 import ApprovalVerifyList from "../pages/StudentVerifyList";
 import InstructorTable from "../pages/InstructorViewPage";
-import UserGroups from "../pages/UserGroup";
 
 const DashboardRoutes = () => {
   return (
