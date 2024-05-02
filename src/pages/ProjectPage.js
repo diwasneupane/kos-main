@@ -2,14 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Container, Table, Modal, Button, Form } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
-import { getAuthToken } from "../utils/Auth";
+import { getAuthToken, getUserRoleFromToken } from "../utils/Auth";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
+import Swal from "sweetalert2";
 
 const ProjectPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editData, setEditData] = useState(null);
+  const userRole = getUserRoleFromToken();
 
   useEffect(() => {
     fetchProjects();
@@ -17,12 +20,79 @@ const ProjectPage = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get("/api/v1/project/Projects", {
-        headers: { Authorization: `Bearer ${getAuthToken()}` },
-      });
-      setProjects(response.data);
+      const token = getAuthToken();
+      if (!token) {
+        console.error("No token found.");
+        return;
+      }
+
+      let projectResponse;
+
+      if (userRole === "admin") {
+        projectResponse = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/project/projects`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      } else {
+        const groupResponse = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const userId = jwtDecode(token)._id;
+
+        const userGroups = groupResponse.data.message.filter((group) => {
+          if (userRole === "student") {
+            return group.students.some((student) => student._id === userId);
+          } else {
+            return group.instructor._id === userId;
+          }
+        });
+
+        const projectIds = userGroups.flatMap((group) =>
+          group.projects.map((project) => project._id)
+        );
+
+        projectResponse = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/project/projects`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const filteredProjects = projectResponse.data.filter((project) =>
+          projectIds.includes(project._id)
+        );
+
+        projectResponse.data = filteredProjects;
+      }
+
+      if (projectResponse.data.length === 0) {
+        Swal.fire({
+          icon: "info",
+          title: "No Projects",
+          text: "No projects were found.",
+        });
+      }
+
+      setProjects(projectResponse.data);
     } catch (error) {
       console.error("Error fetching projects:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while fetching projects.",
+      });
     } finally {
       setLoading(false);
     }
@@ -76,17 +146,20 @@ const ProjectPage = () => {
       className=" p-4"
       style={{ backgroundColor: "white", width: "97%", borderRadius: "5px" }}
     >
-      <Button
-        style={{
-          borderRadius: "25px",
-          border: "0",
-          backgroundColor: "#2DBFCD",
-        }}
-        variant="primary"
-        onClick={toggleModal}
-      >
-        <FontAwesomeIcon icon={faPlus} style={{ color: "white" }} /> Add Project
-      </Button>
+      {userRole !== "student" && (
+        <Button
+          style={{
+            borderRadius: "25px",
+            border: "0",
+            backgroundColor: "#2DBFCD",
+          }}
+          variant="primary"
+          onClick={toggleModal}
+        >
+          <FontAwesomeIcon icon={faPlus} style={{ color: "white" }} /> Add
+          Project
+        </Button>
+      )}
 
       {loading ? (
         <div>Loading...</div>
@@ -99,7 +172,7 @@ const ProjectPage = () => {
               <th style={{ width: "20%" }}>Start Date</th>
               <th style={{ width: "20%" }}>End Date</th>
               <th style={{ width: "20%" }}>Status</th>
-              <th>Actions</th>
+              {!["student"].includes(userRole) && <th>Actions</th>}
             </tr>
           </thead>
           <tbody className="tableData">
@@ -110,23 +183,25 @@ const ProjectPage = () => {
                 <td>{new Date(project.startDate).toLocaleDateString()}</td>
                 <td>{new Date(project.endDate).toLocaleDateString()}</td>
                 <td>{project.status}</td>
-                <td>
-                  <Button variant="link" onClick={() => handleEdit(project)}>
-                    <FontAwesomeIcon
-                      icon={faEdit}
-                      style={{ color: "orange" }}
-                    />
-                  </Button>
-                  <Button
-                    variant="link"
-                    onClick={() => handleDelete(project._id)}
-                  >
-                    <FontAwesomeIcon
-                      icon={faTrashAlt}
-                      style={{ color: "red" }}
-                    />
-                  </Button>
-                </td>
+                {!["student"].includes(userRole) && (
+                  <td>
+                    <Button variant="link" onClick={() => handleEdit(project)}>
+                      <FontAwesomeIcon
+                        icon={faEdit}
+                        style={{ color: "orange" }}
+                      />
+                    </Button>
+                    <Button
+                      variant="link"
+                      onClick={() => handleDelete(project._id)}
+                    >
+                      <FontAwesomeIcon
+                        icon={faTrashAlt}
+                        style={{ color: "red" }}
+                      />
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

@@ -1,14 +1,23 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperPlane, faPaperclip } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPaperPlane,
+  faPaperclip,
+  faFilePdf,
+  faFileWord,
+  faTimesCircle,
+} from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { jwtDecode } from "jwt-decode";
 import moment from "moment";
 import io from "socket.io-client";
 import Scrollbars from "react-custom-scrollbars";
+import userImg1 from "../../assets/images/userImg.jpg";
+import defaultAvatar from "../../assets/images/userImg2.jpg";
 
-import userImage1 from "../../assets/images/userImg.jpg";
+import { IconContext } from "react-icons";
+import { RiFilePdfLine, RiFileWordLine } from "react-icons/ri";
 
 const socket = io(process.env.REACT_APP_SOCKET_URL);
 
@@ -89,10 +98,12 @@ const GroupMessage = () => {
       const messages = response.data.message.messages.map((message) => ({
         ...message,
         senderName: message.sender.username,
+        senderAvatar:
+          message.sender._id === currentUserId ? userImg1 : defaultAvatar,
         isCurrentUser: message.sender._id === currentUserId,
       }));
 
-      setGroupMessages(messages);
+      setGroupMessages(messages); // Reverse array to show recent messages at the bottom
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -140,6 +151,7 @@ const GroupMessage = () => {
           username: decodedToken.username,
         },
         senderName: decodedToken.username,
+        senderAvatar: userImg1,
       };
 
       setGroupMessages((prevMessages) => [...prevMessages, newMessageObj]);
@@ -172,41 +184,56 @@ const GroupMessage = () => {
       window.open(url);
     }
   };
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+  };
 
   return (
-    <div style={{ display: "flex", height: "70vh" }}>
+    <div
+      style={{
+        display: "flex",
+        height: "78vh",
+        flexDirection: "column",
+        backgroundColor: "white",
+        padding: "10px",
+        border: "2px dashed #25628F",
+      }}
+    >
       <div
         style={{
-          width: "20%",
-          backgroundColor: "#2d3748",
-          color: "#fff",
+          backgroundColor: "#25628F",
           padding: "20px",
-          overflowY: "auto",
-          boxShadow: "3px 0 6px rgba(0, 0, 0, 0.1)",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         }}
       >
-        <h3 style={{ marginBottom: "20px" }}>Groups</h3>
-        <ul style={{ listStyle: "none", padding: "0" }}>
+        <h3 style={{ margin: "0", marginRight: "20px" }}>Groups</h3>
+        <div style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
           {groupList.map((group) => (
-            <li
+            <div
               key={group._id}
               style={{
-                marginBottom: "10px",
+                marginRight: "10px",
                 cursor: "pointer",
                 padding: "10px",
+                // backgroundColor: "white",
                 borderRadius: "5px",
                 backgroundColor:
-                  selectedGroup === group._id ? "#4a5568" : "inherit",
+                  selectedGroup === group._id ? "#2DC0CD" : "#4a5568",
                 boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                display: "inline-block",
               }}
               onClick={() => setSelectedGroup(group._id)}
             >
               {group.name}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
-      <div style={{ padding: "20px", backgroundColor: "#edf2f7", flex: 1 }}>
+      <div style={{ flex: 1, position: "relative" }}>
         {isLoading ? (
           <div>Loading messages...</div>
         ) : (
@@ -215,6 +242,23 @@ const GroupMessage = () => {
             autoHideTimeout={1000}
             autoHideDuration={200}
             style={{ maxHeight: "400px" }}
+            renderThumbVertical={({ style, ...props }) => (
+              <div
+                {...props}
+                style={{
+                  ...style,
+                  backgroundColor: "rgba(0,0,0,.3)",
+                  borderRadius: "3px",
+                  cursor: "pointer",
+                  position: "absolute",
+                  right: "2px",
+                  top: "2px",
+                  bottom: "2px",
+                  width: "5px",
+                  zIndex: "999",
+                }}
+              />
+            )}
           >
             <div ref={messageListRef} style={{ marginBottom: "10px" }}>
               {groupMessages.map((message) => (
@@ -237,14 +281,58 @@ const GroupMessage = () => {
                       borderRadius: "10px",
                       textAlign: "left",
                       boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                      position: "relative",
                     }}
                   >
+                    <img
+                      src={message.senderAvatar}
+                      alt="User Avatar"
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "50%",
+                        marginRight: "10px",
+                      }}
+                    />
                     <strong>{message.senderName}</strong>
                     <br />
                     {message.content}
                     <div style={{ fontSize: "0.8em", color: "#666" }}>
                       {moment(message.createdAt).fromNow()}
                     </div>
+                    {message.file && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: "10px",
+                          right: "10px",
+                          display: "grid",
+                          gridTemplateColumns: "auto auto",
+                          gap: "5px",
+                        }}
+                      >
+                        <IconContext.Provider value={{ color: "#007bff" }}>
+                          {message.file.type === "application/pdf" ? (
+                            <RiFilePdfLine size={20} />
+                          ) : (
+                            <RiFileWordLine size={20} />
+                          )}
+                        </IconContext.Provider>
+                        <button
+                          onClick={() => handleFileDownload(message.file)}
+                          style={{
+                            border: "none",
+                            background: "none",
+                            color: "#007bff",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {message.file.type === "application/pdf"
+                            ? "PDF File"
+                            : message.file.name}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -263,7 +351,7 @@ const GroupMessage = () => {
           <FontAwesomeIcon
             icon={faPaperclip}
             onClick={() => document.getElementById("fileInput").click()}
-            style={{ cursor: "pointer" }}
+            style={{ cursor: "pointer", color: "#25628F" }}
           />
           <input
             id="fileInput"
@@ -273,13 +361,16 @@ const GroupMessage = () => {
           />
           {selectedFile && (
             <div style={{ display: "flex", alignItems: "center" }}>
-              <span>{selectedFile.name}</span>
-              <button
-                onClick={handleFileDownload}
-                style={{ marginLeft: "10px" }}
-              >
-                Download
-              </button>
+              <span>
+                {selectedFile.type === "application/pdf"
+                  ? "PDF File"
+                  : selectedFile.name}
+              </span>
+              <FontAwesomeIcon
+                icon={faTimesCircle}
+                onClick={handleRemoveFile}
+                style={{ cursor: "pointer", color: "#dc3545", marginLeft: 5 }}
+              />
             </div>
           )}
           <input
@@ -302,7 +393,7 @@ const GroupMessage = () => {
           <FontAwesomeIcon
             icon={faPaperPlane}
             onClick={handleSendMessage}
-            style={{ cursor: "pointer", color: "#007bff" }}
+            style={{ cursor: "pointer", color: "#25628F" }}
           />
         </div>
       </div>

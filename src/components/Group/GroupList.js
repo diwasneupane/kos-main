@@ -10,7 +10,6 @@ import {
 import ModalWindow from "../../utils/ModalWindow";
 import GroupAddModal from "./GroupAddModal";
 import Swal from "sweetalert2";
-
 import Switch from "react-switch";
 import { jwtDecode } from "jwt-decode";
 import { getUserRoleFromToken } from "../../utils/Auth";
@@ -64,6 +63,7 @@ const GroupList = () => {
 
       if (userRole === "admin") {
         filteredGroups = response.data.message;
+        console.log(filteredGroups);
       } else if (userRole === "student" || userRole === "instructor") {
         filteredGroups = response.data.message.filter((group) => {
           if (userRole === "student") {
@@ -74,7 +74,42 @@ const GroupList = () => {
         });
       }
 
-      setGroupList(filteredGroups);
+      const fetchMessagesForGroups = async (set) => {
+        const updatedGroupsWithMessages = await Promise.all(
+          filteredGroups.map(async (group) => {
+            try {
+              const token = localStorage.getItem("authToken"); // Get token from local storage
+              const config = {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              };
+
+              const response = await axios.get(
+                `${process.env.REACT_APP_API_BASE_URL}/group/groups/${group._id}/messages`,
+                config
+              );
+              console.log(response);
+
+              const messages = response.data.message.messages;
+              const lastMessage =
+                messages.length > 0
+                  ? messages[messages.length - 1].content
+                  : null;
+
+              console.log("Last message content:", lastMessage);
+              return { ...group, lastMessage: lastMessage || null };
+            } catch (error) {
+              console.error("Error fetching messages for group:", error);
+              return { ...group, lastMessage: null };
+            }
+          })
+        );
+
+        set(updatedGroupsWithMessages); // Use the set function to update the state
+      };
+
+      fetchMessagesForGroups(setGroupList); // Pass setGroupList function as an argument
     } catch (error) {
       console.error("Error fetching groups:", error);
       Swal.fire({
@@ -274,12 +309,14 @@ const GroupList = () => {
 
   return (
     <div className="dataContainerBox">
-      <AppButton
-        name="Add Group"
-        customStyle="addBtnColor"
-        icon={faPlus}
-        onClick={toggleAddGroupModal}
-      />
+      {userRole !== "student" && (
+        <AppButton
+          name="Add Group"
+          customStyle="addBtnColor"
+          icon={faPlus}
+          onClick={toggleAddGroupModal}
+        />
+      )}
       <table className="table w-full mt-3">
         <thead>
           <tr>
@@ -287,8 +324,11 @@ const GroupList = () => {
             <th className="py-2 px-4 text-center">Instructor</th>
             <th className="py-2 px-4 text-center">Students</th>
             <th className="py-2 px-4 text-center">Projects</th>
+            <th className="py-2 px-4 text-center">Last Message</th>
             <th className="py-2 px-4 text-center">Raise A Flag</th>
-            <th className="py-2 px-4 text-center">Actions</th>
+            {userRole !== "student" && (
+              <th className="py-2 px-4 text-center">Actions</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -306,53 +346,56 @@ const GroupList = () => {
                   {group.projects.map((project) => project.title).join(", ")}
                 </td>
                 <td className="py-2 px-4">
-                  {userRole === "student" ? (
-                    <span>{group.students.length}</span>
-                  ) : (
-                    <Switch
-                      onChange={() =>
-                        toggleAtRiskStatus(group._id, group.atRisk)
-                      }
-                      checked={group.atRisk}
-                      boxShadow="0px 1px 5px rgba(0, 0, 0, 0.5)"
-                      offColor="#2DBFCD"
-                      onColor="#FFA500"
-                      uncheckedIcon={false}
-                      checkedIcon={false}
-                      height={18}
-                      width={36}
-                    />
-                  )}
+                  {/* Render the last message here */}
+
+                  {group.lastMessage ? group.lastMessage : "No message"}
                 </td>
                 <td className="py-2 px-4">
-                  <div className="flex justify-center">
-                    <FontAwesomeIcon
-                      icon={faPenToSquare}
-                      className="actionIcons editIcon cursor-pointer"
-                      onClick={() => editGroup(group)}
-                      style={{
-                        paddingRight: "2rem",
-                        borderRight: "1px solid #ccc",
-                        marginBottom: "1rem",
-                        "@media (max-width: 768px)": {
-                          fontSize: "1.5rem",
-                        },
-                      }}
-                    />
-                    <FontAwesomeIcon
-                      icon={faTrashAlt}
-                      className="actionIcons deleteIcon cursor-pointer pl-2"
-                      onClick={() => deleteGroup(group._id)}
-                      style={{
-                        paddingLeft: "2rem",
-                        marginBottom: "1rem",
-                        "@media (max-width: 768px)": {
-                          fontSize: "1.5rem",
-                        },
-                      }}
-                    />
-                  </div>
+                  <Switch
+                    onChange={() => toggleAtRiskStatus(group._id, group.atRisk)}
+                    checked={group.atRisk}
+                    boxShadow="0px 1px 5px rgba(0, 0, 0, 0.5)"
+                    offColor="#2DBFCD"
+                    onColor="#FFA500"
+                    uncheckedIcon={false}
+                    checkedIcon={false}
+                    height={18}
+                    width={36}
+                    disabled={userRole === "student"}
+                  />
                 </td>
+
+                {userRole !== "student" && (
+                  <td className="py-2 px-4">
+                    <div className="flex justify-center">
+                      <FontAwesomeIcon
+                        icon={faPenToSquare}
+                        className="actionIcons editIcon cursor-pointer"
+                        onClick={() => editGroup(group)}
+                        style={{
+                          paddingRight: "2rem",
+                          borderRight: "1px solid #ccc",
+                          marginBottom: "1rem",
+                          "@media (max-width: 768px)": {
+                            fontSize: "1.5rem",
+                          },
+                        }}
+                      />
+                      <FontAwesomeIcon
+                        icon={faTrashAlt}
+                        className="actionIcons deleteIcon cursor-pointer pl-2"
+                        onClick={() => deleteGroup(group._id)}
+                        style={{
+                          paddingLeft: "2rem",
+                          marginBottom: "1rem",
+                          "@media (max-width: 768px)": {
+                            fontSize: "1.5rem",
+                          },
+                        }}
+                      />
+                    </div>
+                  </td>
+                )}
               </tr>
             ))
           ) : (
