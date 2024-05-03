@@ -48,6 +48,11 @@ const LoginPage = () => {
         title: "Success!",
         text: "Login successful",
         icon: "success",
+        timer: 1000,
+        didClose: () => {
+          // Navigation logic here, e.g., using window.location.href
+          window.location.href = "/dashboard";
+        },
       });
     } catch (error) {
       const errorMessage =
@@ -59,11 +64,12 @@ const LoginPage = () => {
         title: "Error!",
         text: errorMessage,
         icon: "error",
+        timer: 3000,
       });
     } finally {
       setIsLoading(false);
     }
-    window.location.reload();
+    // window.location.reload();
   };
 
   const handleShowPassword = () => {
@@ -72,7 +78,6 @@ const LoginPage = () => {
 
   const handleRegister = () => {
     History.push(`${process.env.PUBLIC_URL}/register`);
-    console.log("redirecting");
   };
 
   return (

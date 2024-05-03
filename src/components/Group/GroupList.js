@@ -63,7 +63,6 @@ const GroupList = () => {
 
       if (userRole === "admin") {
         filteredGroups = response.data.message;
-        console.log(filteredGroups);
       } else if (userRole === "student" || userRole === "instructor") {
         filteredGroups = response.data.message.filter((group) => {
           if (userRole === "student") {
@@ -89,7 +88,6 @@ const GroupList = () => {
                 `${process.env.REACT_APP_API_BASE_URL}/group/groups/${group._id}/messages`,
                 config
               );
-              console.log(response);
 
               const messages = response.data.message.messages;
               const lastMessage =
@@ -97,7 +95,6 @@ const GroupList = () => {
                   ? messages[messages.length - 1].content
                   : null;
 
-              console.log("Last message content:", lastMessage);
               return { ...group, lastMessage: lastMessage || null };
             } catch (error) {
               console.error("Error fetching messages for group:", error);
@@ -137,6 +134,9 @@ const GroupList = () => {
     const token = getAuthToken();
 
     try {
+      const token = getAuthToken();
+
+      const userRole = getUserRoleFromToken(token);
       const response = await axios.patch(
         `${process.env.REACT_APP_API_BASE_URL}/group/groups/${groupId}/flag-at-risk`,
         { atRisk: newAtRiskStatus },
@@ -298,15 +298,6 @@ const GroupList = () => {
     }
   };
 
-  const addNotification = (notification) => {
-    const storedNotifications = localStorage.getItem("notifications");
-    const existingNotifications = storedNotifications
-      ? JSON.parse(storedNotifications)
-      : [];
-    const updatedNotifications = [...existingNotifications, notification];
-    localStorage.setItem("notifications", JSON.stringify(updatedNotifications));
-  };
-
   return (
     <div className="dataContainerBox">
       {userRole !== "student" && (
@@ -376,7 +367,7 @@ const GroupList = () => {
                           paddingRight: "2rem",
                           borderRight: "1px solid #ccc",
                           marginBottom: "1rem",
-                          "@media (max-width: 768px)": {
+                          "@media (maxWidth: 768px)": {
                             fontSize: "1.5rem",
                           },
                         }}
@@ -388,7 +379,7 @@ const GroupList = () => {
                         style={{
                           paddingLeft: "2rem",
                           marginBottom: "1rem",
-                          "@media (max-width: 768px)": {
+                          "@media (maxWidth: 768px)": {
                             fontSize: "1.5rem",
                           },
                         }}

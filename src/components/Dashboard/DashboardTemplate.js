@@ -110,7 +110,7 @@ class DashboardTemplate extends Component {
         <div style={{ flex: 1, height: "100vh", overflow: "auto" }}>
           <Header toggleSidebar={this.toggleSidebar}></Header>
           <p className="pageTitle">
-            {this.state.selectedMenu ? this.state.selectedMenu.name : null}
+            {/* {this.state.selectedMenu ? this.state.selectedMenu.name : null} */}
           </p>
           <DashboardRoutes></DashboardRoutes>
         </div>

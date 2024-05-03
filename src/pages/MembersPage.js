@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperPlane, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+import UserMessage from "../utils/MessageBox";
 
 const GroupDetailsWithSearch = () => {
   const [groupList, setGroupList] = useState([]);
@@ -13,6 +14,7 @@ const GroupDetailsWithSearch = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [messageContent, setMessageContent] = useState("");
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [showMessageModal, setShowMessageModal] = useState(false);
 
   const serverUrl = process.env.REACT_APP_API_BASE_URL;
   const token = localStorage.getItem("authToken");
@@ -111,20 +113,16 @@ const GroupDetailsWithSearch = () => {
     }
   };
 
-  const handleSendMessageClick = (user) => {
+  const handleOpenMessageModal = (user) => {
     setSelectedUser(user);
-    Swal.fire({
-      title: `Send Message to ${user.fullName || user.username}`,
-      input: "text",
-      inputPlaceholder: "Type your message here...",
-      confirmButtonText: "Send",
-      showCancelButton: true,
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setMessageContent(result.value);
-        handleSendMessage();
-      }
-    });
+    setMessageContent(""); // Reset message content
+    setShowMessageModal(true);
+  };
+
+  const handleSearch = (array, query) => {
+    return array.filter((item) =>
+      item.username.toLowerCase().includes(query.toLowerCase())
+    );
   };
 
   return (
@@ -152,33 +150,8 @@ const GroupDetailsWithSearch = () => {
       {isLoading && <div>Loading group details...</div>}
 
       {groupDetails && (
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: "10px",
-            padding: "20px",
-            backgroundColor: "#f9f9f9",
-          }}
-        >
+        <div>
           <h3>Group: {groupDetails.name}</h3>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <p>Instructor: {groupDetails.instructor?.username || "N/A"}</p>
-            <button
-              onClick={() => handleSendMessageClick(groupDetails.instructor)}
-              style={{
-                padding: "10px",
-                backgroundColor: "#2196F3",
-                color: "#fff",
-                borderRadius: "5px",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              <FontAwesomeIcon icon={faPaperPlane} />
-              Send Message
-            </button>
-          </div>
-
           <input
             type="text"
             value={searchQuery}
@@ -192,53 +165,59 @@ const GroupDetailsWithSearch = () => {
               width: "100%",
             }}
           />
-
           <h4>Members</h4>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              borderRadius: "5px",
-              backgroundColor: "#fff",
-            }}
-          >
+          <table style={{ width: "100%" }}>
             <thead>
               <tr>
-                <th>Member Name</th>
-                <th>Student ID</th>
-                <th>Status</th>
+                <th>Username</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
+              {groupDetails.instructors &&
+                handleSearch(groupDetails.instructors, searchQuery).map(
+                  (instructor) => (
+                    <tr key={instructor._id}>
+                      <td>{instructor.username}</td>
+                      <td>
+                        <FontAwesomeIcon
+                          icon={faPaperPlane}
+                          style={{ color: "#2196F3", cursor: "pointer" }}
+                          onClick={() => handleOpenMessageModal(instructor)}
+                        />
+                      </td>
+                    </tr>
+                  )
+                )}
               {groupDetails.students &&
-                groupDetails.students.map((student) => (
-                  <tr key={student._id}>
-                    <td>{student.fullName || student.username}</td>
-                    <td>{student.studentId}</td>
-                    <td style={{ color: student.isApproved ? "green" : "red" }}>
-                      {student.isApproved ? "Approved" : "Not Approved"}
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => handleSendMessageClick(student)}
-                        style={{
-                          padding: "10px",
-                          backgroundColor: "#4CAF50",
-                          borderRadius: "5px",
-                          border: "none",
-                          color: "#fff",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <FontAwesomeIcon icon={faPaperPlane} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                handleSearch(groupDetails.students, searchQuery).map(
+                  (student) => (
+                    <tr key={student._id}>
+                      <td>{student.username}</td>
+                      <td>
+                        <FontAwesomeIcon
+                          icon={faPaperPlane}
+                          style={{ color: "#2196F3", cursor: "pointer" }}
+                          onClick={() => handleOpenMessageModal(student)}
+                        />
+                      </td>
+                    </tr>
+                  )
+                )}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Message Modal */}
+      {showMessageModal && (
+        <UserMessage
+          user={selectedUser}
+          onClose={() => setShowMessageModal(false)}
+          onSendMessage={handleSendMessage}
+          messageContent={messageContent}
+          setMessageContent={setMessageContent}
+        />
       )}
     </div>
   );

@@ -8,6 +8,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Modal from "./ModalNotification";
 import io from "socket.io-client";
+import axios from "axios";
 
 const NotificationPanel = ({ onUpdateNotificationCount }) => {
   const [notifications, setNotifications] = useState([]);
@@ -16,47 +17,100 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    // Establish WebSocket connection
+    const fetchData = async () => {
+      try {
+        const authToken = localStorage.getItem("authToken");
+        const response = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/notification/notification`,
+          {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+        const notificationsWithRole = response.data.notifications.map(
+          (notification) => {
+            // Assuming sender object contains the sender's role
+            const senderRole = notification.sender.role || "Unknown";
+            return { ...notification, senderRole };
+          }
+        );
+        setNotifications(notificationsWithRole);
+        console.log(notificationsWithRole);
+        setUnreadCount(notificationsWithRole.length);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
+    fetchData();
+
     const socket = io();
 
-    // Listen for "newNotification" events
     socket.on("newNotification", (notification) => {
-      // Update notifications state with the new notification
       setNotifications((prevNotifications) => [
         ...prevNotifications,
         notification,
       ]);
 
-      // Update unread count
       setUnreadCount((prevCount) => prevCount + 1);
 
-      // Call parent function to update notification count in header
       onUpdateNotificationCount((prevCount) => prevCount + 1);
     });
 
-    // Clean up function to disconnect from the WebSocket server
     return () => {
       socket.disconnect();
     };
   }, [onUpdateNotificationCount]);
 
-  // Function to mark a notification as read
+  const deleteNotification = async (id) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      await axios.delete(
+        `http://localhost:3000/api/v1/notification/delete-notification/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setNotifications((prevNotifications) =>
+        prevNotifications.filter((notification) => notification._id !== id)
+      );
+      setUnreadCount((prevCount) => prevCount - 1);
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
+  const handleNotificationClick = async (index, notification) => {
+    setSelectedNotification(notification);
+    setIsModalOpen(true);
+    markNotificationAsRead(index);
+
+    // Delete the notification from the server
+    try {
+      const authToken = localStorage.getItem("authToken");
+      await axios.delete(
+        `${process.env.REACT_APP_API_BASE_URL}/notification/delete-notification/${notification._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
+      console.log("Notification deleted successfully");
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
   const markNotificationAsRead = (index) => {
     const updatedNotifications = [...notifications];
     updatedNotifications.splice(index, 1);
     setNotifications(updatedNotifications);
     setUnreadCount(updatedNotifications.length);
-    // You may also want to update the server/database to mark the notification as read
   };
 
-  // Function to handle click on a notification
-  const handleNotificationClick = (index, notification) => {
-    setSelectedNotification(notification);
-    setIsModalOpen(true);
-    markNotificationAsRead(index); // Mark notification as read
-  };
-
-  // Function to render icon based on notification type
   const renderIcon = (type) => {
     switch (type) {
       case "at-risk":
@@ -70,25 +124,35 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
 
   return (
     <div className="notificationPanelBody">
-      {/* Notification header */}
       <div className="notificationHeader">
         <FontAwesomeIcon icon={faBell} />
         {unreadCount > 0 && (
           <span className="notificationCount">{unreadCount}</span>
         )}
       </div>
-      {/* Notification body */}
       <div className="notificationBody">
         {notifications.length > 0 ? (
           notifications.map((notification, index) => (
             <div
-              key={index}
+              key={notification._id}
               className="notificationItem"
               onClick={() => handleNotificationClick(index, notification)}
             >
-              {renderIcon(notification.type)}
+              {/* Render icon based on notification type */}
+              {notification.type === "general" ? (
+                <FontAwesomeIcon icon={faBell} />
+              ) : (
+                <FontAwesomeIcon icon={faExclamationTriangle} color="orange" />
+              )}
+
               <div className="notificationText">
+                {/* Render notification message */}
                 <strong>{notification.message}</strong>
+                {/* Render sender's role */}
+                <div className="notificationSender">
+                  Sender Role: {notification.senderRole}
+                </div>
+                {/* Render notification date */}
                 <div className="notificationDate">
                   {new Date(notification.date).toDateString()}
                 </div>
@@ -99,11 +163,9 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
           <div className="noNotifications">No notifications</div>
         )}
       </div>
-      {/* Notification footer */}
       <div className="notificationFooter ">
         <Link to="/notifications">See all</Link>
       </div>
-      {/* Notification modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         {selectedNotification ? (
           <div>
