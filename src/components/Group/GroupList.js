@@ -128,14 +128,11 @@ const GroupList = () => {
       });
     }
   };
-
   const toggleAtRiskStatus = async (groupId, currentAtRisk) => {
     const newAtRiskStatus = !currentAtRisk;
     const token = getAuthToken();
 
     try {
-      const token = getAuthToken();
-
       const userRole = getUserRoleFromToken(token);
       const response = await axios.patch(
         `${process.env.REACT_APP_API_BASE_URL}/group/groups/${groupId}/flag-at-risk`,
@@ -148,9 +145,23 @@ const GroupList = () => {
       );
 
       if (response.status === 200) {
-        const updatedGroupList = groupList.map((group) =>
-          group._id === groupId ? { ...group, atRisk: newAtRiskStatus } : group
-        );
+        const updatedGroupList = groupList.map((group) => {
+          if (group._id === groupId) {
+            // If the group ID matches, update the group's atRisk status
+            return {
+              ...group,
+              atRisk: newAtRiskStatus,
+              // Update the group's notification to include the group details
+              notification: {
+                ...group.notification,
+                groupId: group._id,
+                groupDetails: response.data.groupDetails,
+              },
+            };
+          }
+          return group;
+        });
+
         setGroupList(updatedGroupList);
 
         Swal.fire({

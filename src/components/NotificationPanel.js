@@ -9,6 +9,7 @@ import {
 import Modal from "./ModalNotification";
 import io from "socket.io-client";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 const NotificationPanel = ({ onUpdateNotificationCount }) => {
   const [notifications, setNotifications] = useState([]);
@@ -20,6 +21,12 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
     const fetchData = async () => {
       try {
         const authToken = localStorage.getItem("authToken");
+        console.log("Auth token:", authToken);
+
+        const decodedToken = jwtDecode(authToken);
+        const currentUserId = decodedToken._id;
+        console.log("Current user ID:", currentUserId);
+
         const response = await axios.get(
           `${process.env.REACT_APP_API_BASE_URL}/notification/notification`,
           {
@@ -28,21 +35,46 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
             },
           }
         );
-        const notificationsWithRole = response.data.notifications.map(
-          (notification) => {
-            // Assuming sender object contains the sender's role
-            const senderRole = notification.sender.role || "Unknown";
+        console.log("Response data:", response.data);
+
+        // Fetch sender role for each notification
+        const notificationsWithRole = await Promise.all(
+          response.data.notifications.map(async (notification) => {
+            const senderRole = await fetchSenderRole(notification.sender);
             return { ...notification, senderRole };
+          })
+        );
+
+        // Filter notifications based on current user's ID
+        const filteredNotifications = notificationsWithRole.filter(
+          (notification) => {
+            console.log("Notification:", notification);
+
+            // Check if the current user's ID is in the group associated with the notification
+            const userIsInGroup =
+              (notification.groupDetails &&
+                notification.groupDetails.students.some(
+                  (student) => student._id === currentUserId
+                )) ||
+              notification.groupDetails.instructor._id === currentUserId;
+
+            console.log("User is in group:", userIsInGroup);
+
+            // Display the notification only if the user is part of the group
+            return userIsInGroup;
           }
         );
-        setNotifications(notificationsWithRole);
-        console.log(notificationsWithRole);
-        setUnreadCount(notificationsWithRole.length);
+
+        console.log("Filtered notifications:", filteredNotifications);
+
+        // Update state with filtered notifications
+        setNotifications(filteredNotifications);
+        console.log("Filtered notifications state:", filteredNotifications);
+        setUnreadCount(filteredNotifications.length);
       } catch (error) {
         console.error("Error fetching notifications:", error);
       }
     };
-
     fetchData();
 
     const socket = io();
@@ -62,24 +94,21 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
       socket.disconnect();
     };
   }, [onUpdateNotificationCount]);
-
-  const deleteNotification = async (id) => {
+  const fetchSenderRole = async (senderId) => {
     try {
       const token = localStorage.getItem("authToken");
-      await axios.delete(
-        `http://localhost:3000/api/v1/notification/delete-notification/${id}`,
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/users/role/${senderId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      setNotifications((prevNotifications) =>
-        prevNotifications.filter((notification) => notification._id !== id)
-      );
-      setUnreadCount((prevCount) => prevCount - 1);
+      return response.data.role;
     } catch (error) {
-      console.error("Error deleting notification:", error);
+      console.error("Error fetching sender's role:", error);
+      return "Unknown"; // Return a default value if role fetch fails
     }
   };
 
@@ -88,9 +117,13 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
     setIsModalOpen(true);
     markNotificationAsRead(index);
 
-    // Delete the notification from the server
     try {
       const authToken = localStorage.getItem("authToken");
+
+      // Fetch sender role
+      // const senderRole = await fetchSenderRole(notification.sender);
+
+      // Delete the notification
       await axios.delete(
         `${process.env.REACT_APP_API_BASE_URL}/notification/delete-notification/${notification._id}`,
         {
@@ -99,11 +132,19 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
           },
         }
       );
+
       console.log("Notification deleted successfully");
+
+      // Update state to remove the deleted notification
+      const updatedNotifications = [...notifications];
+      updatedNotifications.splice(index, 1);
+      setNotifications(updatedNotifications);
+      setUnreadCount(updatedNotifications.length);
     } catch (error) {
       console.error("Error deleting notification:", error);
     }
   };
+
   const markNotificationAsRead = (index) => {
     const updatedNotifications = [...notifications];
     updatedNotifications.splice(index, 1);
@@ -138,7 +179,6 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
               className="notificationItem"
               onClick={() => handleNotificationClick(index, notification)}
             >
-              {/* Render icon based on notification type */}
               {notification.type === "general" ? (
                 <FontAwesomeIcon icon={faBell} />
               ) : (
@@ -146,13 +186,10 @@ const NotificationPanel = ({ onUpdateNotificationCount }) => {
               )}
 
               <div className="notificationText">
-                {/* Render notification message */}
                 <strong>{notification.message}</strong>
-                {/* Render sender's role */}
-                <div className="notificationSender">
-                  Sender Role: {notification.senderRole}
+                <div className="notificationRole">
+                  Sender {notification.senderRole}
                 </div>
-                {/* Render notification date */}
                 <div className="notificationDate">
                   {new Date(notification.date).toDateString()}
                 </div>

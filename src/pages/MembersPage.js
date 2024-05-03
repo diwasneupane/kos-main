@@ -71,21 +71,12 @@ const GroupDetailsWithSearch = () => {
     }
   }, [selectedGroup]);
 
-  const handleSendMessage = async () => {
-    if (!selectedUser || !messageContent.trim()) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Please select a user and enter a message.",
-      });
-      return;
-    }
-
+  const handleSendMessage = async (userId) => {
     try {
       await axios.post(
         `${serverUrl}/message/send-message-to-user`,
         {
-          receiverId: selectedUser._id,
+          receiverId: userId,
           content: messageContent,
         },
         {
@@ -170,6 +161,7 @@ const GroupDetailsWithSearch = () => {
             <thead>
               <tr>
                 <th>Username</th>
+                <th>Role</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -179,6 +171,7 @@ const GroupDetailsWithSearch = () => {
                   (instructor) => (
                     <tr key={instructor._id}>
                       <td>{instructor.username}</td>
+                      <td>Instructor</td>
                       <td>
                         <FontAwesomeIcon
                           icon={faPaperPlane}
@@ -194,6 +187,7 @@ const GroupDetailsWithSearch = () => {
                   (student) => (
                     <tr key={student._id}>
                       <td>{student.username}</td>
+                      <td>Student</td>
                       <td>
                         <FontAwesomeIcon
                           icon={faPaperPlane}

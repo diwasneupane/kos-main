@@ -1,88 +1,73 @@
-import React, { useState } from "react";
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-} from "chart.js";
-import { Doughnut, Line } from "react-chartjs-2";
-
-ChartJS.register(
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-const data = {
-  labels: ["2022", "2023", "2024"],
-  datasets: [
-    {
-      label: "# of Votes",
-      data: [35, 35, 30],
-      backgroundColor: ["#25628f", "#f36d38", "#13deb9"],
-    },
-  ],
-};
-
-const labels = ["Mon", "Tues", "Wed", "Thu ", "Fri", "Sat", "Sun"];
-
-const lineOptions = {
-  responsive: true,
-  plugins: {
-    legend: {
-      position: "top",
-      align: "start",
-      labels: {
-        usePointStyle: true,
-        pointStyle: "circle",
-        padding: 50,
-      },
-    },
-  },
-  elements: {
-    point: {
-      radius: 0,
-    },
-  },
-};
-
-const lineData = {
-  labels,
-  datasets: [
-    {
-      label: "Active",
-      data: [1000, 1500, 2000, 1800, 1500, 2000, 2200],
-      borderColor: "#2dbfcd",
-      backgroundColor: "#2dbfcd",
-      tension: 0.3,
-    },
-    {
-      label: "Passive",
-      data: [500, 1300, 2500, 2200, 3000, 2500, 2800],
-      borderColor: "#f36d38",
-      backgroundColor: "#f36d38",
-      tension: 0.3,
-    },
-  ],
-};
+import React, { useState, useEffect } from "react";
+import { Doughnut } from "react-chartjs-2";
+import axios from "axios";
 
 const DashboardCharts = () => {
-  const [duration, setDuration] = useState("thisWeek");
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [projectStatus, setProjectStatus] = useState({
+    ongoing: 0,
+    pending: 0,
+    completed: 0,
+  });
 
-  const handleDurationChange = (e) => {
-    let { value } = e.target;
-    setDuration(value);
-    //reload chart data on changing this value
+  useEffect(() => {
+    fetchProjectData();
+  }, []);
+
+  const fetchProjectData = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/api/v1/project/projects"
+      );
+      const projects = response.data.projects;
+      setTotalProjects(projects.length);
+      calculateProjectStatus(projects);
+    } catch (error) {
+      console.error("Error fetching project data:", error);
+    }
+  };
+
+  const calculateProjectStatus = (projects) => {
+    let ongoingCount = 0;
+    let pendingCount = 0;
+    let completedCount = 0;
+
+    projects.forEach((project) => {
+      switch (project.status) {
+        case "ongoing":
+          ongoingCount++;
+          break;
+        case "pending":
+          pendingCount++;
+          break;
+        case "completed":
+          completedCount++;
+          break;
+        default:
+          break;
+      }
+    });
+
+    setProjectStatus({
+      ongoing: ongoingCount,
+      pending: pendingCount,
+      completed: completedCount,
+    });
+  };
+
+  const doughnutData = {
+    labels: ["Ongoing", "Pending", "Completed"],
+    datasets: [
+      {
+        label: "Project Status",
+        data: [
+          projectStatus.ongoing,
+          projectStatus.pending,
+          projectStatus.completed,
+        ],
+        backgroundColor: ["#f36d38", "#13deb9", "#25628f"],
+      },
+    ],
   };
 
   return (
@@ -93,7 +78,7 @@ const DashboardCharts = () => {
           <p className="contentSubtitle">Total Projects</p>
           <div className="position-relative" style={{ padding: "0.5rem 5rem" }}>
             <Doughnut
-              data={data}
+              data={doughnutData}
               options={{
                 cutout: "90%",
                 plugins: {
@@ -110,7 +95,9 @@ const DashboardCharts = () => {
             />
             <div className="chartTitle">
               <p>
-                Projects<br></br>660
+                Projects
+                <br />
+                {totalProjects}
               </p>
             </div>
           </div>
@@ -124,19 +111,14 @@ const DashboardCharts = () => {
               <p className="contentSubtitle mb-0">Overview</p>
             </div>
             <div>
-              <select
-                name="duration"
-                value={duration}
-                className="form-select"
-                onChange={handleDurationChange}
-              >
+              <select name="duration" className="form-select">
                 <option value="thisWeek">This Week</option>
                 <option value="thisMonth">This Month</option>
                 <option value="thisYear">This Year</option>
               </select>
             </div>
           </div>
-          <Line data={lineData} options={lineOptions} height={"100%"} />
+          {/* Include Line chart or other performance-related data here */}
         </div>
       </div>
     </div>
