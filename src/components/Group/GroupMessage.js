@@ -71,9 +71,28 @@ const GroupMessage = () => {
         },
       });
 
-      setGroupList(response.data.message || []);
-      if (response.data.message && response.data.message.length > 0) {
-        setSelectedGroup(response.data.message[0]._id);
+      let filteredGroups;
+
+      if (decodedToken.role === "admin") {
+        filteredGroups = response.data.message;
+      } else if (
+        decodedToken.role === "student" ||
+        decodedToken.role === "instructor"
+      ) {
+        filteredGroups = response.data.message.filter((group) => {
+          if (decodedToken.role === "student") {
+            return group.students.some(
+              (student) => student._id === currentUserId
+            );
+          } else {
+            return group.instructor._id === currentUserId;
+          }
+        });
+      }
+
+      setGroupList(filteredGroups);
+      if (filteredGroups.length > 0) {
+        setSelectedGroup(filteredGroups[0]._id);
       }
     } catch (error) {
       Swal.fire({
@@ -83,7 +102,6 @@ const GroupMessage = () => {
       });
     }
   };
-
   const fetchGroupMessages = async (groupId) => {
     setIsLoading(true);
     try {
@@ -130,7 +148,11 @@ const GroupMessage = () => {
 
     const data = new FormData();
     data.append("groupId", selectedGroup);
-    data.append("content", newMessage);
+
+    if (newMessage.trim() !== "") {
+      data.append("content", newMessage);
+    }
+
     data.append("senderId", currentUserId);
     if (selectedFile) {
       data.append("file", selectedFile);
@@ -171,7 +193,6 @@ const GroupMessage = () => {
       setIsLoading(false);
     }
   };
-
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -196,8 +217,10 @@ const GroupMessage = () => {
     setSearchQuery(e.target.value);
   };
 
-  const filteredMessages = groupMessages.filter((message) =>
-    message.content.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredMessages = groupMessages.filter(
+    (message) =>
+      message.content &&
+      message.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
