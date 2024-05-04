@@ -73,7 +73,38 @@ const GroupList = () => {
         });
       }
 
-      setGroupList(filteredGroups); // Set the filtered groups directly
+      const groupsWithLastMessage = await Promise.all(
+        filteredGroups.map(async (group) => {
+          try {
+            const messageResponse = await axios.get(
+              `${process.env.REACT_APP_API_BASE_URL}/message/group-messages/${group._id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            const lastMessage =
+              messageResponse.data.messages[
+                messageResponse.data.messages.length - 1
+              ].content;
+
+            console.log("Last Message for Group:", group.name, lastMessage);
+
+            return {
+              ...group,
+              lastMessage,
+            };
+          } catch (error) {
+            return {
+              ...group,
+              lastMessage: "Error fetching last message",
+            };
+          }
+        })
+      );
+      setGroupList(groupsWithLastMessage); // Set the filtered groups with last message
     } catch (error) {
       console.error("Error fetching groups:", error);
       Swal.fire({
