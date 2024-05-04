@@ -21,6 +21,7 @@ const ProjectPage = () => {
   const fetchProjects = async () => {
     try {
       const token = getAuthToken();
+
       if (!token) {
         console.error("No token found.");
         return;
@@ -209,6 +210,22 @@ const ProjectPage = () => {
                 )}
               </tr>
             ))}
+            {!projects.length && (
+              <tr>
+                <td colSpan={6}>
+                  <p
+                    style={{
+                      textAlign: "center",
+                      color: "#817878",
+                      margin: 0,
+                      fontWeight: 400,
+                    }}
+                  >
+                    No projects available
+                  </p>
+                </td>
+              </tr>
+            )}
           </tbody>
         </Table>
       )}
@@ -250,7 +267,7 @@ const ProjectForm = ({ initialData, onSubmit, onClose }) => {
   };
 
   return (
-    <Form className="container-fluid p-4">
+    <Form className="container-fluid">
       <Form.Group>
         <Form.Label>Project Title</Form.Label>
         <Form.Control
@@ -260,7 +277,7 @@ const ProjectForm = ({ initialData, onSubmit, onClose }) => {
           onChange={handleChange}
         />
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mt-3">
         <Form.Label className="col-md-9">Description</Form.Label>
         <Form.Control
           as="textarea"
@@ -269,7 +286,7 @@ const ProjectForm = ({ initialData, onSubmit, onClose }) => {
           onChange={handleChange}
         />
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mt-3">
         <Form.Label className="col-md-3 mt-1">Start Date</Form.Label>
         <Form.Control
           type="date"
@@ -278,7 +295,7 @@ const ProjectForm = ({ initialData, onSubmit, onClose }) => {
           onChange={handleChange}
         />
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mt-3">
         <Form.Label className="col-md-3 mt-1">End Date</Form.Label>
         <Form.Control
           type="date"
@@ -287,7 +304,7 @@ const ProjectForm = ({ initialData, onSubmit, onClose }) => {
           onChange={handleChange}
         />
       </Form.Group>
-      <Form.Group>
+      <Form.Group className="mt-3">
         <Form.Label className="col-md-3 mt-1">Status</Form.Label>
         <Form.Control
           as="select"
