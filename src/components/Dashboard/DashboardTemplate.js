@@ -69,7 +69,7 @@ class DashboardTemplate extends Component {
         name: "Members",
         iconName: faUsers,
         link: "/dashboard/membersPage",
-        display: admin,
+        display: admin || instructor || student,
       },
     ],
     settingMenu: {

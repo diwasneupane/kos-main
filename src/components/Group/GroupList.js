@@ -73,40 +73,7 @@ const GroupList = () => {
         });
       }
 
-      const fetchMessagesForGroups = async (set) => {
-        const updatedGroupsWithMessages = await Promise.all(
-          filteredGroups.map(async (group) => {
-            try {
-              const token = localStorage.getItem("authToken"); // Get token from local storage
-              const config = {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              };
-
-              const response = await axios.get(
-                `${process.env.REACT_APP_API_BASE_URL}/group/groups/${group._id}/messages`,
-                config
-              );
-
-              const messages = response.data.message.messages;
-              const lastMessage =
-                messages.length > 0
-                  ? messages[messages.length - 1].content
-                  : null;
-
-              return { ...group, lastMessage: lastMessage || null };
-            } catch (error) {
-              console.error("Error fetching messages for group:", error);
-              return { ...group, lastMessage: null };
-            }
-          })
-        );
-
-        set(updatedGroupsWithMessages); // Use the set function to update the state
-      };
-
-      fetchMessagesForGroups(setGroupList); // Pass setGroupList function as an argument
+      setGroupList(filteredGroups); // Set the filtered groups directly
     } catch (error) {
       console.error("Error fetching groups:", error);
       Swal.fire({

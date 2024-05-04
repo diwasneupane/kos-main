@@ -142,7 +142,6 @@ const GroupAddModal = (props) => {
     <div className="container-fluid">
       <h2>{props.edit ? "Update Group" : "Create Group"}</h2>
 
-      {}
       <Row className="mb-3">
         <Col md={3}>
           <strong>Group Name</strong>

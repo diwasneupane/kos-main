@@ -44,11 +44,16 @@ const NotificationPanel = ({
 
         const filteredNotifications = notificationsWithRole.filter(
           (notification) => {
+            if (!notification.groupDetails) {
+              return true; // Return true for notifications with null groupDetails
+            }
+
             const userIsInGroup =
-              (notification.groupDetails &&
+              (notification.groupDetails.students &&
                 notification.groupDetails.students.some(
                   (student) => student._id === currentUserId
                 )) ||
+              !notification.groupDetails.instructor ||
               notification.groupDetails.instructor._id === currentUserId;
 
             return userIsInGroup;
@@ -61,6 +66,7 @@ const NotificationPanel = ({
         console.error("Error fetching notifications:", error);
       }
     };
+
     fetchData();
 
     const socket = io();

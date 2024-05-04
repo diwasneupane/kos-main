@@ -28,6 +28,7 @@ const GroupMessage = () => {
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const messageListRef = useRef(null);
 
@@ -191,6 +192,14 @@ const GroupMessage = () => {
     setSelectedFile(null);
   };
 
+  const handleSearchInputChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredMessages = groupMessages.filter((message) =>
+    message.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div
       style={{
@@ -236,6 +245,19 @@ const GroupMessage = () => {
           ))}
         </div>
       </div>
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={handleSearchInputChange}
+        style={{
+          margin: "10px 0",
+          padding: "10px",
+          borderRadius: "5px",
+          border: "1px solid #ccc",
+          width: "100%",
+        }}
+        placeholder="Search messages..."
+      />
       <div style={{ flex: 1, position: "relative" }}>
         {isLoading ? (
           <div>Loading messages...</div>
@@ -264,7 +286,7 @@ const GroupMessage = () => {
             )}
           >
             <div ref={messageListRef} style={{ marginBottom: "10px" }}>
-              {groupMessages.map((message) => (
+              {filteredMessages.map((message) => (
                 <div
                   key={message._id}
                   style={{
