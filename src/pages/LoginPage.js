@@ -21,7 +21,6 @@ const LoginPage = () => {
     baseURL:
       process.env.REACT_APP_API_BASE_URL || "http://localhost:3000/api/v1",
   });
-
   const handleLogin = async () => {
     if (!username || password === "") {
       Swal.fire({
@@ -40,7 +39,7 @@ const LoginPage = () => {
         password,
       });
 
-      const { accessToken } = response.data.message;
+      const { accessToken, user } = response.data.message;
 
       localStorage.setItem("authToken", accessToken);
 
@@ -55,10 +54,17 @@ const LoginPage = () => {
         },
       });
     } catch (error) {
-      const errorMessage =
-        error.response && error.response.status === 401
-          ? "Invalid username or password"
-          : "An unexpected error occurred";
+      console.error("Error during login:", error);
+      let errorMessage = "An unexpected error occurred";
+
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMessage = "Invalid username or password";
+        } else if (error.response.status === 403) {
+          errorMessage =
+            "User not approved. Please contact admin for approval.";
+        }
+      }
 
       Swal.fire({
         title: "Error!",
@@ -69,7 +75,6 @@ const LoginPage = () => {
     } finally {
       setIsLoading(false);
     }
-    // window.location.reload();
   };
 
   const handleShowPassword = () => {
