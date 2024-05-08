@@ -5,7 +5,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBan,
   faCheckCircle,
-  faCheckDouble,
   faTrashAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { getAuthToken } from "../utils/Auth";
@@ -15,7 +14,7 @@ const ApprovalVerifyList = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("unapproved"); // Filter: "approved" or "unapproved"
+  const [filter, setFilter] = useState("unapproved"); // "approved" or "unapproved"
 
   const fetchAllStudents = async () => {
     setLoading(true);
@@ -47,7 +46,6 @@ const ApprovalVerifyList = () => {
   const handleToggleApproval = async (userId, currentStatus) => {
     const newApprovalStatus = !currentStatus;
 
-    // Update the local state immediately
     setAllUsers((prevUsers) =>
       prevUsers.map((user) =>
         user._id === userId ? { ...user, isApproved: newApprovalStatus } : user
@@ -65,13 +63,11 @@ const ApprovalVerifyList = () => {
         }
       );
 
-      // Re-fetch to ensure consistency with backend data
-      fetchAllStudents();
+      fetchAllStudents(); // Re-fetch to ensure consistency
     } catch (err) {
       console.error("Error toggling approval status:", err);
       setError("Error toggling approval status.");
 
-      // Revert if the request fails
       setAllUsers((prevUsers) =>
         prevUsers.map((user) =>
           user._id === userId
@@ -91,14 +87,13 @@ const ApprovalVerifyList = () => {
         }
       );
 
-      fetchAllStudents(); // Re-fetch after deleting
+      fetchAllStudents(); // Re-fetch after deletion
     } catch (err) {
       console.error("Error deleting user:", err);
       setError("Error deleting user.");
     }
   };
 
-  // Filter users based on the current filter
   const filteredUsers =
     filter === "approved"
       ? allUsers.filter((user) => user.isApproved) // Approved users
@@ -113,7 +108,8 @@ const ApprovalVerifyList = () => {
         style={{
           display: "flex",
           gap: "1rem",
-          marginBottom: "mb-3",
+          marginBottom: "3",
+          justifyContent: "start", // Center the buttons
         }}
       >
         <AppButton
@@ -131,58 +127,66 @@ const ApprovalVerifyList = () => {
         />
       </div>
 
-      <Table className="table customTable mt-3">
-        <thead>
-          <tr>
-            <th>Student ID</th>
-            <th>Full Name</th>
-            <th>Username</th>
-            <th>Approved</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-
-        <tbody className="tableData">
-          {loading ? (
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "20px" }}>Loading...</div>
+      ) : error ? (
+        <Alert variant="danger">{error}</Alert>
+      ) : (
+        <Table className="table customTable mt-3">
+          <thead>
             <tr>
-              <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
-                Loading... {/* Simple loading message */}
-              </td>
+              <th>Student ID</th>
+              <th>Full Name</th>
+              <th>Username</th>
+              <th>Approved</th>
+              <th>Actions</th>
             </tr>
-          ) : filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
-              <tr key={user._id}>
-                <td className="tableData">{user.studentId}</td>
-                <td>{user.fullName}</td>
-                <td>{user.username}</td>
-                <td>
-                  <Form.Check
-                    type="switch"
-                    checked={user.isApproved}
-                    onChange={() =>
-                      handleToggleApproval(user._id, user.isApproved)
-                    }
-                  />
-                </td>
-                <td>
-                  <Button variant="link" onClick={() => handleDelete(user._id)}>
-                    <FontAwesomeIcon
-                      icon={faTrashAlt}
-                      style={{ color: "red" }}
+          </thead>
+
+          <tbody className="tableData">
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
+                <tr key={user._id}>
+                  <td className="tableData">{user.studentId}</td>
+                  <td>{user.fullName}</td>
+                  <td>{user.username}</td>
+                  <td>
+                    <Form.Check
+                      type="switch"
+                      checked={user.isApproved}
+                      onChange={() =>
+                        handleToggleApproval(user._id, user.isApproved)
+                      }
                     />
-                  </Button>
+                  </td>
+                  <td>
+                    <Button
+                      variant="link"
+                      onClick={() => handleDelete(user._id)}
+                    >
+                      <FontAwesomeIcon
+                        icon={faTrashAlt}
+                        style={{ color: "red" }}
+                      />
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan="5"
+                  style={{ textAlign: "center", padding: "20px" }}
+                >
+                  {filter === "approved"
+                    ? "No approved students found"
+                    : "No unapproved students found"}
                 </td>
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
-                No students found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </Table>
+            )}
+          </tbody>
+        </Table>
+      )}
     </div>
   );
 };
