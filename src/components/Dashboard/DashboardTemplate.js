@@ -59,7 +59,7 @@ class DashboardTemplate extends Component {
         display: instructor || student,
       },
       {
-        name: "User Verify",
+        name: "Student Verify",
         iconName: faCheckCircle,
         link: "/dashboard/ApprovalVerifyList",
         display: admin || instructor,

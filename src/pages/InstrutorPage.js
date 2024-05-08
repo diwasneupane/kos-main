@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Form, Button, Modal, Table, Spinner, Dropdown } from "react-bootstrap";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faPlus,
-  faTrashAlt,
-  faEye,
-  faEyeSlash,
-} from "@fortawesome/free-solid-svg-icons";
+  Button,
+  Table,
+  Spinner,
+  Modal,
+  Form,
+  Container,
+} from "react-bootstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { getAuthToken } from "../utils/Auth";
+import AppButton from "../components/AppButton";
 
-const InstructorForm = ({ onSubmit, onClose, existingUsernames }) => {
+const InstructorPage = () => {
+  const [instructors, setInstructors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     username: "",
@@ -20,156 +26,13 @@ const InstructorForm = ({ onSubmit, onClose, existingUsernames }) => {
     password: "",
   });
 
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleFormChange = (field, value) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      [field]: value,
-    }));
-  };
-
-  const toggleShowPassword = () => {
-    setShowPassword((prevShow) => !prevShow);
-  };
-
-  const validateForm = () => {
-    const usernameRegex = /^.{5,}$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#%&]).{8,}$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (formData.fullName.trim() === "") {
-      Swal.fire("Error", "Full Name is required.", "error");
-      return false;
-    }
-
-    if (!usernameRegex.test(formData.username)) {
-      Swal.fire("Error", "Username must be at least 5 characters.", "error");
-      return false;
-    }
-
-    if (existingUsernames.includes(formData.username)) {
-      Swal.fire("Error", "Username already exists.", "error");
-      return false;
-    }
-
-    if (!emailRegex.test(formData.email)) {
-      Swal.fire("Error", "Please enter a valid email address.", "error");
-      return false;
-    }
-
-    if (!passwordRegex.test(formData.password)) {
-      Swal.fire(
-        "Error",
-        "Password must be at least 8 characters with uppercase, lowercase, number, and special character.",
-        "error"
-      );
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleFormSubmit = async () => {
-    if (validateForm()) {
-      await onSubmit(formData);
-      Swal.fire("Success", "Instructor added successfully.", "success");
-      onClose();
-    }
-  };
-
-  return (
-    <Form>
-      <Form.Group>
-        <Form.Label>Full Name</Form.Label>
-        <Form.Control
-          type="text"
-          onChange={(e) => handleFormChange("fullName", e.target.value)}
-        />
-      </Form.Group>
-
-      <Form.Group>
-        <Form.Label>Username</Form.Label>
-        <Form.Control
-          type="text"
-          value={formData.username}
-          onChange={(e) => handleFormChange("username", e.target.value)}
-        />
-      </Form.Group>
-
-      <Form.Group>
-        <Form.Label>Email</Form.Label>
-        <Form.Control
-          type="email"
-          value={formData.email}
-          onChange={(e) => handleFormChange("email", e.target.value)}
-        />
-      </Form.Group>
-
-      <Form.Group>
-        <Form.Label>Phone</Form.Label>
-        <Form.Control
-          type="text"
-          value={formData.phone}
-          onChange={(e) => handleFormChange("phone", e.target.value)}
-        />
-      </Form.Group>
-
-      <Form.Group>
-        <Form.Label>Password</Form.Label>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <Form.Control
-            type={showPassword ? "text" : "password"}
-            value={formData.password}
-            onChange={(e) => handleFormChange("password", e.target.value)}
-          />
-          <Button
-            variant="link"
-            onClick={toggleShowPassword}
-            style={{ padding: 0, marginLeft: "10px" }}
-          >
-            {showPassword ? (
-              <FontAwesomeIcon icon={faEyeSlash} />
-            ) : (
-              <FontAwesomeIcon icon={faEye} />
-            )}
-          </Button>
-        </div>
-      </Form.Group>
-
-      <Button
-        style={{
-          borderRadius: "5px",
-          backgroundColor: "#2DBFCD",
-          marginRight: "5px",
-        }}
-        onClick={handleFormSubmit}
-      >
-        Submit
-      </Button>
-
-      <Button
-        style={{ borderRadius: "5px", backgroundColor: "#FFA500" }}
-        onClick={onClose}
-      >
-        Close
-      </Button>
-    </Form>
-  );
-};
-
-// InstructorPage Component
-const InstructorPage = () => {
-  const [instructors, setInstructors] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [roleFilter, setRoleFilter] = useState(""); // Role filtering state
-
   useEffect(() => {
     fetchInstructors();
-  }, [roleFilter]); // Reload when role filter changes
+  }, []);
 
-  const toggleModal = () => setShowModal((prevShow) => !prevShow);
+  const toggleModal = () => {
+    setShowModal((prevShow) => !prevShow);
+  };
 
   const fetchInstructors = async () => {
     try {
@@ -179,11 +42,11 @@ const InstructorPage = () => {
       const data = response.data.message;
 
       if (Array.isArray(data)) {
-        const filteredInstructors = roleFilter
-          ? data.filter((instructor) => instructor.role === roleFilter)
-          : data;
-
-        setInstructors(filteredInstructors);
+        // Filter only instructors
+        const instructorData = data.filter(
+          (instructor) => instructor.role === "instructor"
+        );
+        setInstructors(instructorData);
       } else {
         console.error("Expected an array but got:", data);
       }
@@ -194,18 +57,36 @@ const InstructorPage = () => {
     }
   };
 
-  const handleAddInstructor = async (formData) => {
-    const newInstructor = { ...formData, role: "instructor", isApproved: true };
+  const handleAddInstructor = async () => {
+    const newInstructor = {
+      ...formData,
+      role: "instructor",
+      isApproved: true,
+    };
 
     try {
       await axios.post(
         `${process.env.REACT_APP_API_BASE_URL}/users/register`,
         newInstructor
       );
-      fetchInstructors(); // Refresh after adding
+      fetchInstructors();
       Swal.fire("Success", "Instructor added successfully.", "success");
+      setFormData({
+        fullName: "",
+        username: "",
+        email: "",
+        phone: "",
+        password: "",
+      }); // Reset the form
+      toggleModal(); // Close the modal
     } catch (error) {
-      Swal.fire("Error", `Error adding instructor: ${error.message}`, "error");
+      Swal.fire(
+        "Error",
+        `Error adding instructor: ${
+          error.response?.data?.message || error.message
+        }`,
+        "error"
+      );
     }
   };
 
@@ -224,51 +105,41 @@ const InstructorPage = () => {
     } catch (error) {
       Swal.fire(
         "Error",
-        `Error deleting instructor: ${error.message}`,
+        `Error deleting instructor: ${
+          error.response?.data?.message || error.message
+        }`,
         "error"
       );
     }
   };
 
-  const existingUsernames = instructors.map((i) => i.username); // For validation
+  const handleFormChange = (field, value) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      [field]: value,
+    }));
+  };
 
   return (
-    <div
-      className="m-4 p-4"
-      style={{ backgroundColor: "white", width: "97%", borderRadius: "5px" }}
-    >
-      <Button
-        style={{ borderRadius: "25px", backgroundColor: "#2DBFCD" }}
-        onClick={toggleModal}
+    <>
+      <Container
+        className="p-4"
+        style={{
+          backgroundColor: "white",
+          width: "97%",
+          borderRadius: "5px",
+        }}
       >
-        <FontAwesomeIcon icon={faPlus} style={{ color: "white" }} /> Add
-        Instructor
-      </Button>
-
-      <Dropdown className="mt-3 mb-3">
-        <Dropdown.Toggle variant="secondary" id="dropdown-basic">
-          {roleFilter ? `Filter by Role: ${roleFilter}` : "Filter by Role"}
-        </Dropdown.Toggle>
-
-        <Dropdown.Menu>
-          <Dropdown.Item onClick={() => setRoleFilter("")}>All</Dropdown.Item>
-          <Dropdown.Item onClick={() => setRoleFilter("instructor")}>
-            Instructor
-          </Dropdown.Item>
-          <Dropdown.Item onClick={() => setRoleFilter("admin")}>
-            Admin
-          </Dropdown.Item>
-        </Dropdown.Menu>
-      </Dropdown>
-
-      {loading ? (
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </Spinner>
+        <div className="mb-3">
+          <AppButton
+            name="Add Instructor"
+            customStyle="addBtnColor"
+            icon={faPlus}
+            onClick={toggleModal}
+          />
         </div>
-      ) : (
-        <Table className="table customTable mt-3">
+
+        <Table className="table customTable">
           <thead>
             <tr>
               <th>Full Name</th>
@@ -279,44 +150,122 @@ const InstructorPage = () => {
               <th>Actions</th>
             </tr>
           </thead>
+
           <tbody>
-            {instructors.map((instructor) => (
-              <tr key={instructor._id}>
-                <td>{instructor.fullName}</td>
-                <td>{instructor.username}</td>
-                <td>{instructor.email}</td>
-                <td>{instructor.phone}</td>
-                <td>{instructor.role}</td>
-                <td>
-                  <Button
-                    variant="link"
-                    onClick={() => handleDelete(instructor._id)}
-                  >
-                    <FontAwesomeIcon
-                      icon={faTrashAlt}
-                      style={{ color: "red" }}
-                    />
-                  </Button>
+            {loading ? (
+              <tr>
+                <td
+                  colSpan="6"
+                  style={{ textAlign: "center", padding: "20px" }}
+                >
+                  <div>Loading...</div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              instructors.map((instructor) => (
+                <tr key={instructor._id}>
+                  <td>{instructor.fullName}</td>
+                  <td>{instructor.username}</td>
+                  <td>{instructor.email}</td>
+                  <td>{instructor.phone}</td>
+                  <td>{instructor.role}</td>
+                  <td>
+                    <Button
+                      variant="link"
+                      onClick={() => handleDelete(instructor._id)}
+                    >
+                      <FontAwesomeIcon
+                        icon={faTrashAlt}
+                        style={{ color: "red" }}
+                      />
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </Table>
-      )}
-
+      </Container>
       <Modal show={showModal} onHide={toggleModal}>
         <Modal.Header closeButton>
           <Modal.Title>Add New Instructor</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <InstructorForm
-            onSubmit={handleAddInstructor}
-            onClose={toggleModal}
-            existingUsernames={existingUsernames}
-          />
+          <Form>
+            <Form.Group>
+              <Form.Label>Full Name</Form.Label>
+              <Form.Control
+                type="text"
+                value={formData.fullName}
+                onChange={(e) => handleFormChange("fullName", e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-3">
+              <Form.Label>Username</Form.Label>
+              <Form.Control
+                type="text"
+                value={formData.username}
+                onChange={(e) => handleFormChange("username", e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleFormChange("email", e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-3">
+              <Form.Label>Phone</Form.Label>
+              <Form.Control
+                type="text"
+                value={formData.phone}
+                onChange={(e) => handleFormChange("phone", e.target.value)}
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                value={formData.password}
+                onChange={(e) => handleFormChange("password", e.target.value)}
+              />
+            </Form.Group>
+            <div className="text-center mt-4">
+              <Button
+                style={{
+                  borderRadius: "5px",
+                  border: "0",
+                  backgroundColor: "#2DBFCD",
+                  marginRight: "5px",
+                }}
+                variant="primary"
+                onClick={handleAddInstructor}
+              >
+                Add Instructor
+              </Button>
+
+              <Button
+                style={{
+                  borderRadius: "5px",
+                  border: "0",
+                  backgroundColor: "#FFA500",
+                }}
+                variant="secondary"
+                onClick={toggleModal}
+              >
+                Cancel
+              </Button>
+            </div>
+          </Form>
         </Modal.Body>
       </Modal>
-    </div>
+    </>
   );
 };
 

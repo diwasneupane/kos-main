@@ -1,50 +1,59 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Table, Button, Form, Spinner, Alert, Dropdown } from "react-bootstrap";
+import { Table, Button, Form, Alert } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
-import { getAuthToken } from "../utils/Auth"; // Adjust the import path as needed
+import {
+  faBan,
+  faCheckCircle,
+  faCheckDouble,
+  faTrashAlt,
+} from "@fortawesome/free-solid-svg-icons";
+import { getAuthToken } from "../utils/Auth";
+import AppButton from "../components/AppButton";
 
 const ApprovalVerifyList = () => {
-  const [users, setUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [roleFilter, setRoleFilter] = useState(""); // Role-based filter state
+  const [filter, setFilter] = useState("unapproved"); // Filter: "approved" or "unapproved"
 
-  const fetchPendingUsers = async () => {
+  const fetchAllStudents = async () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/users/pendingApproval`,
+        `${process.env.REACT_APP_API_BASE_URL}/users/users`,
         {
           headers: { Authorization: `Bearer ${getAuthToken()}` },
         }
       );
 
-      const allPendingUsers = response.data.message.filter(
-        (user) => !user.isApproved
+      const allStudents = response.data.message.filter(
+        (user) => user.role === "student"
       );
 
-      // Apply role-based filter
-      const filteredUsers = roleFilter
-        ? allPendingUsers.filter((user) => user.role === roleFilter)
-        : allPendingUsers;
-
-      setUsers(filteredUsers);
+      setAllUsers(allStudents);
     } catch (err) {
-      console.error("Error fetching pending users:", err);
-      setError("Error fetching pending users.");
+      console.error("Error fetching all students:", err);
+      setError("Error fetching all students.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPendingUsers();
-  }, [roleFilter]); // Reloads when role filter changes
+    fetchAllStudents();
+  }, []);
 
   const handleToggleApproval = async (userId, currentStatus) => {
-    const newApprovalStatus = !currentStatus; // Toggle the status
+    const newApprovalStatus = !currentStatus;
+
+    // Update the local state immediately
+    setAllUsers((prevUsers) =>
+      prevUsers.map((user) =>
+        user._id === userId ? { ...user, isApproved: newApprovalStatus } : user
+      )
+    );
+
     try {
       await axios.patch(
         `${process.env.REACT_APP_API_BASE_URL}/users/users-approve/${userId}`,
@@ -56,10 +65,20 @@ const ApprovalVerifyList = () => {
         }
       );
 
-      fetchPendingUsers(); // Re-fetch the data after toggling approval
+      // Re-fetch to ensure consistency with backend data
+      fetchAllStudents();
     } catch (err) {
       console.error("Error toggling approval status:", err);
       setError("Error toggling approval status.");
+
+      // Revert if the request fails
+      setAllUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user._id === userId
+            ? { ...user, isApproved: currentStatus } // Revert if failed
+            : user
+        )
+      );
     }
   };
 
@@ -72,93 +91,98 @@ const ApprovalVerifyList = () => {
         }
       );
 
-      fetchPendingUsers(); // Re-fetch the data after deleting a user
+      fetchAllStudents(); // Re-fetch after deleting
     } catch (err) {
       console.error("Error deleting user:", err);
       setError("Error deleting user.");
     }
   };
 
+  // Filter users based on the current filter
+  const filteredUsers =
+    filter === "approved"
+      ? allUsers.filter((user) => user.isApproved) // Approved users
+      : allUsers.filter((user) => !user.isApproved); // Unapproved users
+
   return (
     <div
       className="p-4 bg-white m-4"
       style={{ backgroundColor: "white", width: "97%", borderRadius: "5px" }}
     >
-      {loading ? (
-        <div style={{ textAlign: "center" }}>
-          <Spinner animation="border" role="status" />
-          <span>Loading...</span>
-        </div>
-      ) : error ? (
-        <Alert variant="danger">{error}</Alert>
-      ) : (
-        <div>
-          <Dropdown className="mb-3">
-            <Dropdown.Toggle variant="secondary" id="dropdown-basic">
-              {roleFilter ? `Filter by Role: ${roleFilter}` : "Filter by Role"}
-            </Dropdown.Toggle>
+      <div
+        style={{
+          display: "flex",
+          gap: "1rem",
+          marginBottom: "mb-3",
+        }}
+      >
+        <AppButton
+          name="Unapproved"
+          customStyle="addBtnColor"
+          icon={faBan}
+          onClick={() => setFilter("unapproved")}
+        />
 
-            <Dropdown.Menu>
-              <Dropdown.Item onClick={() => setRoleFilter("")}>
-                All
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setRoleFilter("student")}>
-                Student
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => setRoleFilter("instructor")}>
-                Instructor
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+        <AppButton
+          name="Approved"
+          customStyle="addBtnColor"
+          icon={faCheckCircle}
+          onClick={() => setFilter("approved")}
+        />
+      </div>
 
-          <Table striped bordered hover responsive>
-            <thead>
-              <tr>
-                <th>Full Name</th>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Approved</th>
-                <th>Actions</th>
+      <Table className="table customTable mt-3">
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Full Name</th>
+            <th>Username</th>
+            <th>Approved</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody className="tableData">
+          {loading ? (
+            <tr>
+              <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
+                Loading... {/* Simple loading message */}
+              </td>
+            </tr>
+          ) : filteredUsers.length > 0 ? (
+            filteredUsers.map((user) => (
+              <tr key={user._id}>
+                <td className="tableData">{user.studentId}</td>
+                <td>{user.fullName}</td>
+                <td>{user.username}</td>
+                <td>
+                  <Form.Check
+                    type="switch"
+                    checked={user.isApproved}
+                    onChange={() =>
+                      handleToggleApproval(user._id, user.isApproved)
+                    }
+                  />
+                </td>
+                <td>
+                  <Button variant="link" onClick={() => handleDelete(user._id)}>
+                    <FontAwesomeIcon
+                      icon={faTrashAlt}
+                      style={{ color: "red" }}
+                    />
+                  </Button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {users.length > 0 ? (
-                users.map((user) => (
-                  <tr key={user._id}>
-                    <td>{user.fullName}</td>
-                    <td>{user.username}</td>
-                    <td>{user.role}</td>
-                    <td>
-                      <Form.Check
-                        type="switch"
-                        checked={user.isApproved}
-                        onChange={() =>
-                          handleToggleApproval(user._id, user.isApproved)
-                        }
-                      />
-                    </td>
-                    <td>
-                      <Button
-                        variant="link"
-                        onClick={() => handleDelete(user._id)}
-                      >
-                        <FontAwesomeIcon
-                          icon={faTrashAlt}
-                          style={{ color: "red" }}
-                        />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5">No pending approvals</td>
-                </tr>
-              )}
-            </tbody>
-          </Table>
-        </div>
-      )}
+            ))
+          ) : (
+            <tr>
+              <td colSpan="5" style={{ textAlign: "center", padding: "20px" }}>
+                No students found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </Table>
     </div>
   );
 };
