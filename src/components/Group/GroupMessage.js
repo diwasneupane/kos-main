@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faFileDownload,
   faPaperPlane,
   faPaperclip,
   faTimesCircle,
@@ -13,8 +14,14 @@ import io from "socket.io-client";
 import userImg1 from "../../assets/images/userImg.jpg";
 import defaultAvatar from "../../assets/images/userImg2.jpg";
 import { IconContext } from "react-icons";
-import { RiFilePdf2Fill, RiFileWordLine } from "react-icons/ri";
-
+import {
+  RiFilePdf2Fill,
+  RiFileWordLine,
+  RiFileExcel2Fill,
+  RiFileImageFill,
+  RiFileTextFill,
+  RiFileWord2Fill,
+} from "react-icons/ri";
 const socket = io(process.env.REACT_APP_SOCKET_URL);
 
 const GroupMessage = () => {
@@ -287,26 +294,23 @@ const GroupMessage = () => {
         placeholder="Search messages..."
       />
 
-      <div style={{ flex: 1, overflowY: "auto", maxHeight: "400px" }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          maxHeight: "400px",
+        }}
+      >
         {groupMessages.map((message) => (
           <div
             key={message._id}
             style={{
+              padding: "10px",
               display: "flex",
               justifyContent: message.isCurrentUser ? "flex-end" : "flex-start",
               alignItems: "center",
             }}
           >
-            <img
-              src={message.senderAvatar}
-              alt="User Avatar"
-              style={{
-                width: "30px",
-                height: "30px",
-                borderRadius: "50%",
-                marginRight: "10px",
-              }}
-            />
             <div
               style={{
                 backgroundColor: message.isCurrentUser ? "#d1e7dd" : "#f8d7da",
@@ -317,41 +321,107 @@ const GroupMessage = () => {
                 position: "relative",
               }}
             >
+              <img
+                src={message.senderAvatar}
+                alt="User Avatar"
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  borderRadius: "50%",
+                  marginRight: "10px",
+                }}
+              />
               <strong>{message.senderName}</strong>
               <br />
-              {message.content}
-              <div style={{ fontSize: "0.8em", color: "#666" }}>
-                {moment(message.createdAt).fromNow()}
-              </div>
-              {message.attachment && (
-                <div>
-                  <span>Attached file:</span>
-                  <IconContext.Provider value={{ color: "#007bff" }}>
-                    {message.attachment.mimeType ===
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ? (
-                      <RiFileWordLine size={20} />
-                    ) : (
-                      <RiFilePdf2Fill size={20} />
-                    )}
-                  </IconContext.Provider>
+              <div style={{ padding: "2px" }}>{message.content}</div>
 
+              {message.attachment && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    // backgroundColor: "#fff",
+                    border: "1px solid #fff",
+                    padding: "5px",
+                    borderRadius: "10px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <IconContext.Provider
+                      value={{
+                        color:
+                          message.attachment.mimeType === "application/pdf"
+                            ? "#e63946"
+                            : message.attachment.mimeType ===
+                              "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            ? "#007bff"
+                            : message.attachment.mimeType ===
+                              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            ? "#2a9d8f"
+                            : message.attachment.mimeType === "text/plain"
+                            ? "#f4a261"
+                            : message.attachment.mimeType === "image/png"
+                            ? "#9b59b6"
+                            : "#666",
+                      }}
+                    >
+                      {message.attachment.mimeType === "application/pdf" ? (
+                        <RiFilePdf2Fill size={20} />
+                      ) : message.attachment.mimeType ===
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ? (
+                        <RiFileWord2Fill size={20} />
+                      ) : message.attachment.mimeType ===
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ? (
+                        <RiFileExcel2Fill size={20} />
+                      ) : message.attachment.mimeType === "text/plain" ? (
+                        <RiFileTextFill size={20} />
+                      ) : message.attachment.mimeType === "image/png" ? (
+                        <RiFileImageFill size={20} />
+                      ) : (
+                        <RiFileTextFill size={20} />
+                      )}
+                    </IconContext.Provider>
+                    <span style={{ margin: "4px" }}>
+                      {message.attachment.filename}
+                    </span>
+                  </div>
                   <button
-                    onClick={() => {
-                      // Implement the logic to download or open the file
+                    onClick={() =>
                       window.open(
-                        ` http://localhost:3000//uploads/${message.attachment.filename}`
-                      );
-                    }}
+                        `http://localhost:3000/uploads/${message.attachment.filename}`
+                      )
+                    }
                     style={{
                       cursor: "pointer",
-                      textDecoration: "underline",
-                      color: "#007bff",
+                      backgroundColor: "#25628F",
+                      border: "none",
+                      borderRadius: "4px",
+                      color: "#fff",
+                      padding: "6px 6px",
+                      display: "flex",
+                      alignItems: "center",
+                      fontSize: "14px",
+                      transition: "background-color 0.3s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#1D4C70";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "#25628F";
                     }}
                   >
-                    {message.attachment.filename}
+                    <FontAwesomeIcon
+                      icon={faFileDownload}
+                      style={{ marginRight: "8px" }}
+                    />
+                    Download
                   </button>
                 </div>
               )}
+              <div style={{ fontSize: "0.8em", color: "#666" }}>
+                {moment(message.createdAt).fromNow()}
+              </div>
             </div>
           </div>
         ))}
