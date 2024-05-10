@@ -4,20 +4,16 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPaperPlane,
   faPaperclip,
-  faFilePdf,
-  faFileWord,
   faTimesCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { jwtDecode } from "jwt-decode";
 import moment from "moment";
 import io from "socket.io-client";
-import Scrollbars from "react-custom-scrollbars";
 import userImg1 from "../../assets/images/userImg.jpg";
 import defaultAvatar from "../../assets/images/userImg2.jpg";
-
 import { IconContext } from "react-icons";
-import { RiFilePdf2Fill, RiFilePdfLine, RiFileWordLine } from "react-icons/ri";
+import { RiFilePdf2Fill, RiFileWordLine } from "react-icons/ri";
 
 const socket = io(process.env.REACT_APP_SOCKET_URL);
 
@@ -102,8 +98,10 @@ const GroupMessage = () => {
       });
     }
   };
+
   const fetchGroupMessages = async (groupId) => {
     setIsLoading(true);
+
     try {
       const response = await axios.get(
         `${serverUrl}/group/groups/${groupId}/messages`,
@@ -114,14 +112,24 @@ const GroupMessage = () => {
         }
       );
 
-      const messages = response.data.message.messages.map((message) => ({
-        ...message,
-        senderName: message.sender.username,
-        senderAvatar:
-          message.sender._id === currentUserId ? userImg1 : defaultAvatar,
-        isCurrentUser: message.sender._id === currentUserId,
-      }));
+      const messages = response.data.message.messages.map((message) => {
+        // If message has an attached file, construct the download URL
+        const filename = message.filename || message.attachment?.filename;
+        console.log(filename);
+        const fileUrl = filename
+          ? ` http://localhost:3000//uploads/${filename}`
+          : null;
 
+        console.log(fileUrl);
+        return {
+          ...message,
+          fileUrl, // Add fileUrl to the message data
+          senderName: message.sender.username,
+          senderAvatar:
+            message.sender._id === currentUserId ? userImg1 : defaultAvatar,
+          isCurrentUser: message.sender._id === currentUserId,
+        };
+      });
       setGroupMessages(messages);
     } catch (error) {
       Swal.fire({
@@ -170,6 +178,8 @@ const GroupMessage = () => {
         }
       );
 
+      console.log("Response from server:", response.data);
+
       const newMessageObj = {
         ...response.data.message,
         sender: {
@@ -193,6 +203,7 @@ const GroupMessage = () => {
       setIsLoading(false);
     }
   };
+
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -202,11 +213,6 @@ const GroupMessage = () => {
 
   const handleFileSelect = (e) => {
     setSelectedFile(e.target.files[0]);
-  };
-
-  const handleFileDownload = (file) => {
-    const url = URL.createObjectURL(file);
-    window.open(url);
   };
 
   const handleRemoveFile = () => {
@@ -241,7 +247,6 @@ const GroupMessage = () => {
           color: "#fff",
           display: "flex",
           alignItems: "center",
-
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         }}
       >
@@ -254,7 +259,6 @@ const GroupMessage = () => {
                 marginRight: "10px",
                 cursor: "pointer",
                 padding: "10px",
-                // backgroundColor: "white",
                 borderRadius: "5px",
                 backgroundColor:
                   selectedGroup === group._id ? "#2DC0CD" : "#4a5568",
@@ -268,6 +272,7 @@ const GroupMessage = () => {
           ))}
         </div>
       </div>
+
       <input
         type="text"
         value={searchQuery}
@@ -281,169 +286,131 @@ const GroupMessage = () => {
         }}
         placeholder="Search messages..."
       />
-      <div style={{ flex: 1, position: "relative" }}>
-        {isLoading ? (
-          <div>Loading messages...</div>
-        ) : (
-          <Scrollbars
-            autoHide
-            autoHideTimeout={1000}
-            autoHideDuration={200}
-            style={{ maxHeight: "400px" }}
-            renderThumbVertical={({ style, ...props }) => (
-              <div
-                {...props}
-                style={{
-                  ...style,
-                  backgroundColor: "rgba(0,0,0,.3)",
-                  borderRadius: "3px",
-                  cursor: "pointer",
-                  position: "absolute",
-                  right: "2px",
-                  top: "2px",
-                  bottom: "2px",
-                  width: "5px",
-                  zIndex: "999",
-                }}
-              />
-            )}
+
+      <div style={{ flex: 1, overflowY: "auto", maxHeight: "400px" }}>
+        {groupMessages.map((message) => (
+          <div
+            key={message._id}
+            style={{
+              display: "flex",
+              justifyContent: message.isCurrentUser ? "flex-end" : "flex-start",
+              alignItems: "center",
+            }}
           >
-            <div ref={messageListRef} style={{ marginBottom: "10px" }}>
-              {filteredMessages.map((message) => (
-                <div
-                  key={message._id}
-                  style={{
-                    marginBottom: "10px",
-                    display: "flex",
-                    justifyContent: message.isCurrentUser
-                      ? "flex-end"
-                      : "flex-start",
-                  }}
-                >
-                  <div
+            <img
+              src={message.senderAvatar}
+              alt="User Avatar"
+              style={{
+                width: "30px",
+                height: "30px",
+                borderRadius: "50%",
+                marginRight: "10px",
+              }}
+            />
+            <div
+              style={{
+                backgroundColor: message.isCurrentUser ? "#d1e7dd" : "#f8d7da",
+                padding: "10px",
+                borderRadius: "10px",
+                textAlign: "left",
+                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                position: "relative",
+              }}
+            >
+              <strong>{message.senderName}</strong>
+              <br />
+              {message.content}
+              <div style={{ fontSize: "0.8em", color: "#666" }}>
+                {moment(message.createdAt).fromNow()}
+              </div>
+              {message.attachment && (
+                <div>
+                  <span>Attached file:</span>
+                  <IconContext.Provider value={{ color: "#007bff" }}>
+                    {message.attachment.mimeType ===
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ? (
+                      <RiFileWordLine size={20} />
+                    ) : (
+                      <RiFilePdf2Fill size={20} />
+                    )}
+                  </IconContext.Provider>
+
+                  <button
+                    onClick={() => {
+                      // Implement the logic to download or open the file
+                      window.open(
+                        ` http://localhost:3000//uploads/${message.attachment.filename}`
+                      );
+                    }}
                     style={{
-                      backgroundColor: message.isCurrentUser
-                        ? "#d1e7dd"
-                        : "#f8d7da",
-                      padding: "10px",
-                      borderRadius: "10px",
-                      textAlign: "left",
-                      boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                      position: "relative",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      color: "#007bff",
                     }}
                   >
-                    <img
-                      src={message.senderAvatar}
-                      alt="User Avatar"
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "50%",
-                        marginRight: "10px",
-                      }}
-                    />
-                    <strong>{message.senderName}</strong>
-                    <br />
-                    {message.content}
-                    <div style={{ fontSize: "0.8em", color: "#666" }}>
-                      {moment(message.createdAt).fromNow()}
-                    </div>
-                    {message.file && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          bottom: "10px",
-                          right: "10px",
-                          display: "grid",
-                          gridTemplateColumns: "auto auto",
-                          gap: "5px",
-                        }}
-                      >
-                        <IconContext.Provider value={{ color: "#007bff" }}>
-                          {message.file.type === "application/pdf" ? (
-                            <RiFilePdf2Fill size={20} />
-                          ) : (
-                            <RiFileWordLine size={20} />
-                          )}
-                        </IconContext.Provider>
-                        <button
-                          onClick={() => handleFileDownload(message.file)}
-                          style={{
-                            border: "none",
-                            background: "none",
-                            color: "#007bff",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {message.file.type === "application/pdf"
-                            ? "PDF File"
-                            : message.file.name}
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    {message.attachment.filename}
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
-          </Scrollbars>
-        )}
+          </div>
+        ))}
+      </div>
 
-        <div
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: "20px",
+        }}
+      >
+        <FontAwesomeIcon
+          icon={faPaperclip}
+          onClick={() => document.getElementById("fileInput").click()}
+          style={{ cursor: "pointer", color: "#25628F" }}
+        />
+        <input
+          id="fileInput"
+          type="file"
+          style={{ display: "none" }}
+          onChange={handleFileSelect}
+        />
+        {selectedFile && (
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <span>
+              {selectedFile.type === "application/pdf"
+                ? "PDF File"
+                : selectedFile.name}
+            </span>
+            <FontAwesomeIcon
+              icon={faTimesCircle}
+              onClick={handleRemoveFile}
+              style={{ cursor: "pointer", color: "#dc3545", marginLeft: 5 }}
+            />
+          </div>
+        )}
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: "20px",
+            flex: 1,
+            padding: "10px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+            margin: "0 10px",
+            backgroundColor: "#fff",
+            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
           }}
-        >
-          <FontAwesomeIcon
-            icon={faPaperclip}
-            onClick={() => document.getElementById("fileInput").click()}
-            style={{ cursor: "pointer", color: "#25628F" }}
-          />
-          <input
-            id="fileInput"
-            type="file"
-            style={{ display: "none" }}
-            onChange={handleFileSelect}
-          />
-          {selectedFile && (
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <span>
-                {selectedFile.type === "application/pdf"
-                  ? "PDF File"
-                  : selectedFile.name}
-              </span>
-              <FontAwesomeIcon
-                icon={faTimesCircle}
-                onClick={handleRemoveFile}
-                style={{ cursor: "pointer", color: "#dc3545", marginLeft: 5 }}
-              />
-            </div>
-          )}
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            style={{
-              flex: 1,
-              padding: "10px",
-              borderRadius: "5px",
-              border: "1px solid #ccc",
-              margin: "0 10px",
-              backgroundColor: "#fff",
-              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-              height: "40px",
-            }}
-            placeholder="Write your message..."
-          />
-          <FontAwesomeIcon
-            icon={faPaperPlane}
-            onClick={handleSendMessage}
-            style={{ cursor: "pointer", color: "#25628F" }}
-          />
-        </div>
+          placeholder="Write your message..."
+        />
+        <FontAwesomeIcon
+          icon={faPaperPlane}
+          onClick={handleSendMessage}
+          style={{ cursor: "pointer", color: "#25628F" }}
+        />
       </div>
     </div>
   );
