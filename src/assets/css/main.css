@@ -291,6 +291,7 @@ body {
   font-size: 25px;
   margin: 10px;
   cursor: pointer;
+  color: var(--primary);
 }
 
 .bellIcon {
@@ -379,6 +380,8 @@ body {
   margin-right: -5px;
 }
 
+
+
 .notificationFooter:hover {
   background-color: var(--secondary);
 }
@@ -386,6 +389,9 @@ body {
 .notificationFooter a {
   color: var(--whiteColor);
 }
+
+
+
 
 .panelHeight {
   height: 420px;

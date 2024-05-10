@@ -122,7 +122,7 @@ const GroupMessage = () => {
         isCurrentUser: message.sender._id === currentUserId,
       }));
 
-      setGroupMessages(messages); // Reverse array to show recent messages at the bottom
+      setGroupMessages(messages);
     } catch (error) {
       Swal.fire({
         icon: "error",

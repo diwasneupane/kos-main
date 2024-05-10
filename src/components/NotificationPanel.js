@@ -44,19 +44,18 @@ const NotificationPanel = ({
 
         const filteredNotifications = notificationsWithRole.filter(
           (notification) => {
-            if (!notification.groupDetails) {
-              return true; // Return true for notifications with null groupDetails
-            }
-
             const userIsInGroup =
-              (notification.groupDetails.students &&
+              notification.groupDetails &&
+              ((notification.groupDetails.students &&
                 notification.groupDetails.students.some(
                   (student) => student._id === currentUserId
                 )) ||
-              !notification.groupDetails.instructor ||
-              notification.groupDetails.instructor._id === currentUserId;
+                !notification.groupDetails.instructor ||
+                notification.groupDetails.instructor._id === currentUserId);
 
-            return userIsInGroup;
+            const isReceiver = notification.receiver === currentUserId;
+
+            return userIsInGroup || isReceiver;
           }
         );
 
@@ -72,12 +71,26 @@ const NotificationPanel = ({
     const socket = io();
 
     socket.on("newNotification", (notification) => {
-      setNotifications((prevNotifications) => [
-        ...prevNotifications,
-        notification,
-      ]);
+      const authToken = localStorage.getItem("authToken");
+      const decodedToken = jwtDecode(authToken);
+      const currentUserId = decodedToken._id;
+      if (
+        (notification.groupDetails &&
+          ((notification.groupDetails.students &&
+            notification.groupDetails.students.some(
+              (student) => student._id === currentUserId
+            )) ||
+            !notification.groupDetails.instructor ||
+            notification.groupDetails.instructor._id === currentUserId)) ||
+        notification.receiver === currentUserId
+      ) {
+        setNotifications((prevNotifications) => [
+          ...prevNotifications,
+          notification,
+        ]);
 
-      onUpdateNotificationCount((prevCount) => prevCount + 1);
+        onUpdateNotificationCount((prevCount) => prevCount + 1);
+      }
     });
 
     return () => {
