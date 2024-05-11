@@ -15,9 +15,9 @@ const GroupProgress = (props) => {
                   {item.progress}
                 </p>
               </div>
-              <div className={`progress progressBgColor${idx}`}>
+              <div class={`progress progressBgColor${idx}`}>
                 <div
-                  className={`progress-bar progressColor${idx}`}
+                  class={`progress-bar progressColor${idx}`}
                   role="progressbar"
                   style={{ width: item.progress }}
                   aria-valuenow={item.progress}

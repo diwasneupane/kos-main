@@ -11,6 +11,10 @@ import {
   Title,
 } from "chart.js";
 import { Doughnut, Line } from "react-chartjs-2";
+import { jwtDecode } from "jwt-decode";
+import axios from "axios";
+import { getUserRoleFromToken } from "../../utils/Auth";
+import Swal from "sweetalert2";
 
 ChartJS.register(
   ArcElement,
@@ -24,7 +28,7 @@ ChartJS.register(
 );
 
 const data = {
-  labels: ["2022", "2023", "2024"],
+  labels: [],
   datasets: [
     {
       label: "# of Votes",
@@ -78,6 +82,68 @@ const lineData = {
 
 const DashboardCharts = () => {
   const [duration, setDuration] = useState("thisWeek");
+  // const [totalProjects, setTotalProjects] = useState(660);
+  const [projectCount, setProjectCount] = useState(0);
+
+  const fetchProjectCount = async () => {
+    const token = localStorage.getItem("authToken");
+    const decodedToken = jwtDecode(token);
+    const userId = decodedToken._id;
+
+    try {
+      if (!token) {
+        console.error("No token found.");
+        return;
+      }
+
+      const userRole = getUserRoleFromToken(token);
+
+      if (!userRole) {
+        console.error("No role found in the token.");
+        return;
+      }
+
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_BASE_URL}/group/groups`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      let filteredGroups;
+
+      if (userRole === "admin") {
+        filteredGroups = response.data.message;
+      } else if (userRole === "student" || userRole === "instructor") {
+        filteredGroups = response.data.message.filter((group) => {
+          if (userRole === "student") {
+            return group.students.some((student) => student._id === userId);
+          } else {
+            return group.instructor._id === userId;
+          }
+        });
+      }
+
+      const projectCount = filteredGroups.reduce(
+        (total, group) => total + group.projects.length,
+        0
+      );
+
+      setProjectCount(projectCount);
+    } catch (error) {
+      console.error("Error fetching project count:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "An error occurred while fetching the project count.",
+      });
+    }
+  };
+
+  // Call the function
+  fetchProjectCount();
 
   const handleDurationChange = (e) => {
     let { value } = e.target;
@@ -108,9 +174,11 @@ const DashboardCharts = () => {
                 },
               }}
             />
-            <div className="chartTitle">
+            <div className="chartTitle" style={{}}>
               <p>
-                Projects<br></br>660
+                Projects
+                <br />
+                {projectCount}
               </p>
             </div>
           </div>

@@ -142,23 +142,59 @@ const DashboardPage = () => {
     }
   };
 
+  // Static data for group progress
+  const groupProgressData = [
+    {
+      groupName: "Group A",
+      progress: "75%",
+    },
+    {
+      groupName: "Group B",
+      progress: "50%",
+    },
+    {
+      groupName: "Group C",
+      progress: "90%",
+    },
+    {
+      groupName: "Group D",
+      progress: "60%",
+    },
+  ];
+
+  // Static data for events
+  const eventsData = [
+    {
+      title: "Group A Project Discussion",
+      date: "2015-02-10T10:12:50.500Z",
+    },
+    {
+      title: "Group A Project Submission Deadline",
+      date: "2015-02-10T10:12:50.500Z",
+    },
+    {
+      title: "Semi Annual Meeting and Project Discussion",
+      date: "2015-02-10T10:12:50.500Z",
+    },
+  ];
+
   return (
     <div className="container-fluid customMargin">
       <Summary
         displayIcons={displayIcons}
         summary={[
+          { name: "Groups", count: groupCount },
           { name: "Students", count: studentCount },
           { name: "Instructors", count: instructorCount },
-          { name: "Projects", count: projectCount },
         ]}
       />
       <DashboardCharts />
       <div className="row" style={{ marginBottom: "1.5rem" }}>
         <div className="col-md-6">
-          <GroupProgress groupProgress={groupList} />
+          <GroupProgress groupProgress={groupProgressData} />
         </div>
         <div className="col-md-6">
-          <EventCalendar events={events} />
+          <EventCalendar events={eventsData} />
         </div>
       </div>
     </div>
