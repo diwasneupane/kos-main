@@ -197,26 +197,14 @@ const GroupMessage = () => {
 
       console.log("Response from server:", response.data);
 
-      const newMessageObj = {
-        content: newMessage.trim() || null, // Use the newMessage state as the content
-        sender: {
-          _id: currentUserId,
-          username: decodedToken.username,
-        },
-        senderName: decodedToken.username,
-        senderAvatar: userImg1,
-        createdAt: new Date(),
-        // Add any other properties required by your message object
-      };
+      // Fetch the updated group messages after sending the new message
+      fetchGroupMessages(selectedGroup);
 
-      console.log("New message object:", newMessageObj);
-
-      setGroupMessages((prevMessages) => [...prevMessages, newMessageObj]);
       setNewMessage("");
       setSelectedFile(null);
 
       // Emit the new message to the server
-      socket.emit("sendMessage", newMessageObj);
+      socket.emit("sendMessage", response.data.message);
     } catch (error) {
       Swal.fire({
         icon: "error",
