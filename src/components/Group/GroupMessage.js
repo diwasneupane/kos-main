@@ -58,17 +58,14 @@ const GroupMessage = () => {
   }, [selectedGroup]);
 
   useEffect(() => {
-    const newMessageListener = (message) => {
-      console.log("Received new message:", message);
-      setGroupMessages((prevMessages) => [...prevMessages, message]);
-    };
+    const fetchMessagesInterval = setInterval(() => {
+      if (selectedGroup) {
+        fetchGroupMessages(selectedGroup);
+      }
+    }, 5000); // Fetch messages every 5 seconds
 
-    socket.on("newMessage", newMessageListener);
-
-    return () => {
-      socket.off("newMessage", newMessageListener);
-    };
-  }, []);
+    return () => clearInterval(fetchMessagesInterval);
+  }, [selectedGroup]);
 
   useEffect(() => {
     scrollToBottom(); // Call scrollToBottom instead of scrollToTop
@@ -202,9 +199,12 @@ const GroupMessage = () => {
 
       setNewMessage("");
       setSelectedFile(null);
+      socket.emit("sendMessage", response.data.message);
+
+      // Emit a custom event to broadcast the new message
+      socket.emit("newMessageBroadcast", response.data.message);
 
       // Emit the new message to the server
-      socket.emit("sendMessage", response.data.message);
     } catch (error) {
       Swal.fire({
         icon: "error",
