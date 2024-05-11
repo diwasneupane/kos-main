@@ -57,12 +57,12 @@ const GroupMessage = () => {
   }, [selectedGroup]);
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToTop();
   }, [groupMessages]);
 
-  const scrollToBottom = () => {
+  const scrollToTop = () => {
     if (messageListRef.current) {
-      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+      messageListRef.current.scrollTop = 0;
     }
   };
 
@@ -120,7 +120,6 @@ const GroupMessage = () => {
       );
 
       const messages = response.data.message.messages.map((message) => {
-        // If message has an attached file, construct the download URL
         const filename = message.filename || message.attachment?.filename;
         console.log(filename);
         const fileUrl = filename
@@ -130,7 +129,7 @@ const GroupMessage = () => {
         console.log(fileUrl);
         return {
           ...message,
-          fileUrl, // Add fileUrl to the message data
+          fileUrl,
           senderName: message.sender.username,
           senderAvatar:
             message.sender._id === currentUserId ? userImg1 : defaultAvatar,
@@ -197,7 +196,11 @@ const GroupMessage = () => {
         senderAvatar: userImg1,
       };
 
-      setGroupMessages((prevMessages) => [...prevMessages, newMessageObj]);
+      setGroupMessages((prevMessages) => {
+        const updatedMessages = [...prevMessages, newMessageObj];
+        console.log("Updated messages:", updatedMessages);
+        return updatedMessages;
+      });
       setNewMessage("");
       setSelectedFile(null);
     } catch (error) {
@@ -230,11 +233,17 @@ const GroupMessage = () => {
     setSearchQuery(e.target.value);
   };
 
-  const filteredMessages = groupMessages.filter(
-    (message) =>
-      message.content &&
-      message.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMessages = groupMessages
+    .filter(
+      (message) =>
+        (message.content &&
+          message.content.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (message.attachment &&
+          message.attachment.filename
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()))
+    )
+    .reverse();
 
   return (
     <div
@@ -295,13 +304,16 @@ const GroupMessage = () => {
       />
 
       <div
+        ref={messageListRef}
         style={{
           flex: 1,
           overflowY: "auto",
           maxHeight: "400px",
+          display: "flex",
+          flexDirection: "column-reverse", // Add this line
         }}
       >
-        {groupMessages.map((message) => (
+        {filteredMessages.map((message) => (
           <div
             key={message._id}
             style={{
