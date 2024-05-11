@@ -67,10 +67,10 @@ const GroupAddModal = (props) => {
     if (!instructor) {
       newErrors.instructor = "Instructor selection is required.";
     }
-    if (groupStudent.length === 0) {
+    if (!groupStudent) {
       newErrors.groupStudent = "At least one student must be selected.";
     }
-    if (projects.length === 0) {
+    if (!projects) {
       newErrors.projects = "At least one project must be selected.";
     }
 
@@ -80,6 +80,18 @@ const GroupAddModal = (props) => {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
+      return;
+    }
+
+    // Check if at least one student is selected
+    if (groupStudent.length === 0) {
+      Swal.fire("Error", "At least one student must be selected.", "error");
+      return;
+    }
+
+    // Check if at least one project is selected
+    if (projects.length === 0) {
+      Swal.fire("Error", "At least one project must be selected.", "error");
       return;
     }
 
@@ -93,6 +105,12 @@ const GroupAddModal = (props) => {
     const token = localStorage.getItem("authToken");
 
     try {
+      // Check if group name is unique if creating a new group
+      if (!props.edit && !(await isGroupNameUnique(name, token))) {
+        setErrors({ ...errors, name: "Group name must be unique." });
+        return;
+      }
+
       let response;
       if (props.edit && props.editData && props.editData._id) {
         response = await axios.patch(
@@ -135,6 +153,26 @@ const GroupAddModal = (props) => {
       const errorMsg =
         error.response?.data?.message || "Unknown error occurred.";
       Swal.fire("Error", `Group operation failed: ${errorMsg}`, "error");
+    }
+  };
+
+  const isGroupNameUnique = async (groupName, token) => {
+    try {
+      const response = await axios.get(
+        `${
+          process.env.REACT_APP_API_BASE_URL
+        }/group/groups?name=${encodeURIComponent(groupName)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      return response.data.length === 0;
+    } catch (error) {
+      console.error("Error checking group name uniqueness:", error);
+      return false;
     }
   };
 

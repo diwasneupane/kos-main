@@ -349,7 +349,7 @@ const GroupList = () => {
                 </td>
                 <td>
                   {/* Render the last message here */}
-                  {group.lastMessage ? group.lastMessage : "No message"}
+                  {group.lastMessage ? group.lastMessage : "Attachment sent"}
                 </td>
                 <td>
                   <Switch
