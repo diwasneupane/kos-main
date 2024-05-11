@@ -57,14 +57,36 @@ const GroupMessage = () => {
     };
   }, [selectedGroup]);
 
-  useEffect(() => {
-    const fetchMessagesInterval = setInterval(() => {
-      if (selectedGroup) {
-        fetchGroupMessages(selectedGroup);
-      }
-    }, 5000); // Fetch messages every 5 seconds
+  // useEffect(() => {
+  //   const fetchMessagesInterval = setInterval(() => {
+  //     if (selectedGroup) {
+  //       fetchGroupMessages(selectedGroup);
+  //     }
+  //   }, 5000); // Fetch messages every 5 seconds
 
-    return () => clearInterval(fetchMessagesInterval);
+  //   return () => clearInterval(fetchMessagesInterval);
+  // }, [selectedGroup]);
+  useEffect(() => {
+    if (selectedGroup) {
+      fetchGroupMessages(selectedGroup);
+      socket.emit("joinGroup", selectedGroup);
+    }
+
+    return () => {
+      socket.off("newMessage");
+    };
+  }, [selectedGroup]);
+  useEffect(() => {
+    const newMessageListener = (message) => {
+      console.log("Received new message:", message);
+      fetchGroupMessages(selectedGroup); // Fetch messages after receiving a new message
+    };
+
+    socket.on("newMessage", newMessageListener);
+
+    return () => {
+      socket.off("newMessage", newMessageListener);
+    };
   }, [selectedGroup]);
 
   useEffect(() => {
