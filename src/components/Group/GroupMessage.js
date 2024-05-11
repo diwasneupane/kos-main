@@ -22,6 +22,7 @@ import {
   RiFileTextFill,
   RiFileWord2Fill,
 } from "react-icons/ri";
+
 const socket = io(process.env.REACT_APP_SOCKET_URL);
 
 const GroupMessage = () => {
@@ -57,12 +58,25 @@ const GroupMessage = () => {
   }, [selectedGroup]);
 
   useEffect(() => {
-    scrollToTop();
+    const newMessageListener = (message) => {
+      console.log("Received new message:", message);
+      setGroupMessages((prevMessages) => [...prevMessages, message]);
+    };
+
+    socket.on("newMessage", newMessageListener);
+
+    return () => {
+      socket.off("newMessage", newMessageListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom(); // Call scrollToBottom instead of scrollToTop
   }, [groupMessages]);
 
-  const scrollToTop = () => {
+  const scrollToBottom = () => {
     if (messageListRef.current) {
-      messageListRef.current.scrollTop = 0;
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   };
 
@@ -121,12 +135,10 @@ const GroupMessage = () => {
 
       const messages = response.data.message.messages.map((message) => {
         const filename = message.filename || message.attachment?.filename;
-        console.log(filename);
         const fileUrl = filename
           ? ` http://localhost:3000//uploads/${filename}`
           : null;
 
-        console.log(fileUrl);
         return {
           ...message,
           fileUrl,
@@ -147,7 +159,6 @@ const GroupMessage = () => {
       setIsLoading(false);
     }
   };
-
   const handleSendMessage = async () => {
     if (newMessage.trim() === "" && !selectedFile) {
       Swal.fire({
@@ -187,22 +198,25 @@ const GroupMessage = () => {
       console.log("Response from server:", response.data);
 
       const newMessageObj = {
-        ...response.data.message,
+        content: newMessage.trim() || null, // Use the newMessage state as the content
         sender: {
           _id: currentUserId,
           username: decodedToken.username,
         },
         senderName: decodedToken.username,
         senderAvatar: userImg1,
+        createdAt: new Date(),
+        // Add any other properties required by your message object
       };
 
-      setGroupMessages((prevMessages) => {
-        const updatedMessages = [...prevMessages, newMessageObj];
-        console.log("Updated messages:", updatedMessages);
-        return updatedMessages;
-      });
+      console.log("New message object:", newMessageObj);
+
+      setGroupMessages((prevMessages) => [...prevMessages, newMessageObj]);
       setNewMessage("");
       setSelectedFile(null);
+
+      // Emit the new message to the server
+      socket.emit("sendMessage", newMessageObj);
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -213,7 +227,6 @@ const GroupMessage = () => {
       setIsLoading(false);
     }
   };
-
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -244,7 +257,6 @@ const GroupMessage = () => {
             .includes(searchQuery.toLowerCase()))
     )
     .reverse();
-
   return (
     <div
       style={{
@@ -257,6 +269,7 @@ const GroupMessage = () => {
       }}
     >
       <div
+        className="custom-scrollbar"
         style={{
           backgroundColor: "#25628F",
           padding: "20px",
@@ -264,29 +277,29 @@ const GroupMessage = () => {
           display: "flex",
           alignItems: "center",
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          overflowX: "auto",
+          whiteSpace: "nowrap",
+          scrollbarWidth: "thin",
         }}
       >
-        <h3 style={{ margin: "0", marginRight: "20px" }}>Groups</h3>
-        <div style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
-          {groupList.map((group) => (
-            <div
-              key={group._id}
-              style={{
-                marginRight: "10px",
-                cursor: "pointer",
-                padding: "10px",
-                borderRadius: "5px",
-                backgroundColor:
-                  selectedGroup === group._id ? "#2DC0CD" : "#4a5568",
-                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                display: "inline-block",
-              }}
-              onClick={() => setSelectedGroup(group._id)}
-            >
-              {group.name}
-            </div>
-          ))}
-        </div>
+        {groupList.map((group) => (
+          <div
+            key={group._id}
+            style={{
+              marginRight: "10px",
+              cursor: "pointer",
+              padding: "10px",
+              borderRadius: "5px",
+              backgroundColor:
+                selectedGroup === group._id ? "#2DC0CD" : "#4a5568",
+              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+              display: "inline-block",
+            }}
+            onClick={() => setSelectedGroup(group._id)}
+          >
+            {group.name}
+          </div>
+        ))}
       </div>
 
       <input
@@ -311,6 +324,7 @@ const GroupMessage = () => {
           maxHeight: "400px",
           display: "flex",
           flexDirection: "column-reverse", // Add this line
+          scrollbarWidth: "thin",
         }}
       >
         {filteredMessages.map((message) => (
