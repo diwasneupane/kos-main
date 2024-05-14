@@ -267,6 +267,12 @@ const GroupMessage = () => {
             .includes(searchQuery.toLowerCase()))
     )
     .reverse();
+  function handleKeyDown(event) {
+    if (event.ctrlKey && event.key === "s") {
+      event.preventDefault(); // Prevent browser's default save behavior
+      // You can optionally provide feedback to the user here
+    }
+  }
   return (
     <div
       style={{
@@ -423,11 +429,26 @@ const GroupMessage = () => {
                     </span>
                   </div>
                   <button
-                    onClick={() =>
-                      window.open(
+                    onClick={() => {
+                      fetch(
                         `http://localhost:3000/uploads/${message.attachment.filename}`
                       )
-                    }
+                        .then((response) => response.blob())
+                        .then((blob) => {
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = message.attachment.filename; // Set the file name
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        })
+                        .catch((error) => {
+                          console.error("Error downloading file:", error);
+                          // Handle error
+                        });
+                    }}
                     style={{
                       cursor: "pointer",
                       backgroundColor: "#25628F",

@@ -31,7 +31,7 @@ class DashboardTemplate extends Component {
         name: "Dashboard",
         iconName: faGauge,
         link: "/dashboard",
-        display: true,
+        display: admin,
       },
       {
         name: "Projects",

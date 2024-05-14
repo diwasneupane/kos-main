@@ -83,7 +83,6 @@ const GroupAddModal = (props) => {
       return;
     }
 
-    // Check if at least one student is selected
     if (groupStudent.length === 0) {
       Swal.fire("Error", "At least one student must be selected.", "error");
       return;
@@ -105,12 +104,6 @@ const GroupAddModal = (props) => {
     const token = localStorage.getItem("authToken");
 
     try {
-      // Check if group name is unique if creating a new group
-      if (!props.edit && !(await isGroupNameUnique(name, token))) {
-        setErrors({ ...errors, name: "Group name must be unique." });
-        return;
-      }
-
       let response;
       if (props.edit && props.editData && props.editData._id) {
         response = await axios.patch(
