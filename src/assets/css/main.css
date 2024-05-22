@@ -933,3 +933,7 @@ body {
 .removeBtn:hover {
   background-color: var(--textColor);
 }
+
+.ml-auto {
+  margin-left: auto;
+}

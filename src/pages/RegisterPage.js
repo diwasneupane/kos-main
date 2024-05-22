@@ -3,7 +3,7 @@ import axios from "axios";
 import koiLogo from "../assets/images/koiLogo.png";
 import AppButton from "../components/AppButton";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserAlt, faKey, faIdCard } from "@fortawesome/free-solid-svg-icons";
+import { faUserAlt, faKey, faIdCard, faEnvelopeOpenText } from "@fortawesome/free-solid-svg-icons";
 import { faEye, faEyeSlash } from "@fortawesome/free-regular-svg-icons";
 import Swal from "sweetalert2";
 import History from "../utils/History";
@@ -12,8 +12,12 @@ import { WithRouter } from "../utils/WithRouter";
 class RegisterPage extends Component {
   constructor(props) {
     super(props);
+
+    const searchParams = new URLSearchParams(location.search);
+    
     this.state = {
-      studentId: "",
+      studentId: searchParams.get("studentId") || "",
+      invitationCode: searchParams.get("invitationCode") || "",
       username: "",
       fullName: "",
       password: "",
@@ -69,6 +73,10 @@ class RegisterPage extends Component {
       return "Student ID already exists. Please use a different ID.";
     }
 
+    if(errorData.toLowerCase().includes("invitation code")) {
+      return errorData;
+    }
+
     return "An unexpected error occurred.";
   };
 
@@ -120,6 +128,7 @@ class RegisterPage extends Component {
         fullName,
         password,
         role: "student",
+        invitationCode: this.state.invitationCode,
       });
 
       Swal.fire({
@@ -162,12 +171,25 @@ class RegisterPage extends Component {
           <img src={koiLogo} className="img-fluid" alt="Logo" />
           <div className="mt-4">
             <div className="position-relative">
+              <FontAwesomeIcon icon={faEnvelopeOpenText} className="loginIcon" />
+              <input
+                type="text"
+                className="form-input"
+                name="invitationCode"
+                placeholder="Invitation Code"
+                value={this.state.invitationCode}
+                onChange={this.handleChange}
+              />
+            </div>
+
+            <div className="position-relative">
               <FontAwesomeIcon icon={faIdCard} className="loginIcon" />
               <input
                 type="text"
                 className="form-input"
                 name="studentId"
                 placeholder="Student ID"
+                value={this.state.studentId}
                 onChange={this.handleChange}
               />
             </div>

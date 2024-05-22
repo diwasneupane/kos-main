@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Table, Button, Form, Alert } from "react-bootstrap";
+import { Table, Button, Form, Alert, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBan,
@@ -9,12 +9,18 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { getAuthToken } from "../utils/Auth";
 import AppButton from "../components/AppButton";
+import Swal from "sweetalert2";
 
 const ApprovalVerifyList = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("unapproved"); // "approved" or "unapproved"
+  const [openInviteModal, setOpenInviteModal] = useState(false);
+  const [inviteData, setInviteData] = useState({
+    email: "",
+    studentId: "",
+  })
 
   const fetchAllStudents = async () => {
     setLoading(true);
@@ -94,6 +100,31 @@ const ApprovalVerifyList = () => {
     }
   };
 
+  const sendInvitation = () => {
+    axios.post(
+      `${process.env.REACT_APP_API_BASE_URL}/invite-student`,
+      inviteData,
+      {
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      }
+    ).then(() => {
+      Swal.fire({
+        title: "Success!",
+        text: "Invitation sent successfully!",
+        icon: "success",
+      })
+      
+      setOpenInviteModal(false)
+      setInviteData({
+        email: "",
+        studentId: "",
+      })
+    })
+    .catch(err => {
+      alert(err.response.data.message)
+    })
+  }
+
   const filteredUsers =
     filter === "approved"
       ? allUsers.filter((user) => user.isApproved) // Approved users
@@ -124,6 +155,12 @@ const ApprovalVerifyList = () => {
           customStyle="addBtnColor"
           icon={faCheckCircle}
           onClick={() => setFilter("approved")}
+        />
+
+        <AppButton
+          name="Invite Student"
+          customStyle="addBtnColor ml-auto"
+          onClick={() => setOpenInviteModal(true)}
         />
       </div>
 
@@ -187,6 +224,83 @@ const ApprovalVerifyList = () => {
           </tbody>
         </Table>
       )}
+
+      <Modal show={openInviteModal} onHide={() => {
+          setInviteData({
+            email: "",
+            studentId: "",
+          });        
+          setOpenInviteModal(false)
+        }}>
+        <Modal.Header closeButton>
+          <Modal.Title>Invite student</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={(e) => {
+            e.preventDefault();
+            sendInvitation();
+          }}>
+            <Form.Group>
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                value={inviteData.email}
+                onChange={(e) => setInviteData((val) => ({
+                  ...val,
+                  email: e.target.value
+                }))}
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mt-3">
+              <Form.Label>Student ID</Form.Label>
+              <Form.Control
+                type="text"
+                value={inviteData.studentId}
+                onChange={(e) => setInviteData((val) => ({
+                  ...val,
+                  studentId: e.target.value
+                }))}
+                required
+              />
+            </Form.Group>
+
+            <div className="text-center mt-4">
+              <Button
+                type="submit"
+                style={{
+                  borderRadius: "5px",
+                  border: "0",
+                  backgroundColor: "#2DBFCD",
+                  marginRight: "5px",
+                }}
+                variant="primary"
+              >
+                Invite
+              </Button>
+
+              <Button
+                style={{
+                  borderRadius: "5px",
+                  border: "0",
+                  backgroundColor: "#FFA500",
+                }}
+                variant="secondary"
+                onClick={() => {
+                  setOpenInviteModal(false);
+                  setInviteData({
+                    email: "",
+                    studentId: "",
+                  });
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 };
